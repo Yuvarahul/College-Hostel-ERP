@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Profile | HostelERP Admin Portal</title>
+<link rel="stylesheet" href="warden_dashboard.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+
+    <div class="main-content">
+      <div id="topbar-root"></div>
+
+      <main class="page">
+        <div class="breadcrumb"><a href="admin-dashboard.html">Dashboard</a> <i class="fa-solid fa-chevron-right"></i> Profile</div>
+        <div class="page-header">
+          <h2>My Profile</h2>
+          <p>Your administrator account details.</p>
+        </div>
+
+        <div class="dashboard-grid" style="grid-template-columns: 340px 1fr;">
+          <div class="card glass-panel panel" style="text-align:center;">
+            <div class="warden-avatar" style="width:90px; height:90px; font-size:30px; margin:0 auto 16px;" id="profileAvatar"></div>
+            <h3 id="profileName" style="font-size:18px; margin-bottom:4px;"></h3>
+            <p style="color:var(--text-muted); font-size:12.5px; margin-bottom:14px;" id="profileRole">Administrator</p>
+            <span class="badge badge-approved" id="profileStatusBadge" style="margin-bottom:18px; display:inline-flex;"><i></i>Active</span>
+            <button class="btn btn-danger" style="width:100%;" id="logoutBtnProfile"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+          </div>
+
+          <div class="card panel">
+            <div class="panel-title"><span>Administrator Information</span></div>
+            <div class="detail-grid" id="profileDetails"></div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+<script src="students.js"></script>
+<script src="registrations.js"></script>
+<script src="rooms.js"></script>
+<script src="js/script.js"></script>
+<script src="warden_dashboard.js"></script>
+<script src="admin-shell.js"></script>
+<script src="admin-data.js"></script>
+<script>
+  const admin = initAdminShell("profile", { showSearch: false });
+  if (admin) {
+    document.getElementById("profileAvatar").textContent = initials(admin.name || "Admin");
+    document.getElementById("profileName").textContent = admin.name || "Admin";
+    document.getElementById("profileStatusBadge").textContent = admin.status || "Active";
+
+    const fields = [
+      { label: "Admin ID", value: admin.adminId, icon: "fa-id-card" },
+      { label: "Full Name", value: admin.name, icon: "fa-user" },
+      { label: "Designation", value: admin.designation || "—", icon: "fa-briefcase" },
+      { label: "Shift", value: admin.shift || "—", icon: "fa-clock" },
+      { label: "Email Address", value: admin.email || "—", icon: "fa-envelope" },
+      { label: "Phone Number", value: admin.phone || "—", icon: "fa-phone" },
+      { label: "Registered On", value: admin.registeredAt ? new Date(admin.registeredAt).toLocaleDateString("en-IN") : "—", icon: "fa-calendar-check" }
+    ];
+
+    document.getElementById("profileDetails").innerHTML = fields.map(f => `
+      <div class="d-item">
+        <span><i class="fa-solid ${f.icon}"></i> ${f.label}</span>
+        <p>${f.value}</p>
+      </div>`).join("");
+
+    document.getElementById("logoutBtnProfile").addEventListener("click", () => {
+      openConfirmModal({
+        title: "Log out?",
+        message: "You'll need to sign back in to access the Admin dashboard.",
+        confirmLabel: "Log Out",
+        confirmClass: "btn-danger",
+        onConfirm: () => {
+          showToast("info", "Logged out", "Redirecting to Admin Login...");
+          setTimeout(adminLogout, 900);
+        }
+      });
+    });
+  }
+</script>
+</body>
+</html>

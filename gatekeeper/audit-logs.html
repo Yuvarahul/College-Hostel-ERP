@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Audit Logs | GateKeeper</title>
+<link rel="stylesheet" href="gatekeeper-style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="topbar-root"></div>
+
+      <main class="page">
+        <div class="breadcrumb"><a href="dashboard.html">Dashboard</a> <i class="fa-solid fa-chevron-right"></i> Audit Logs</div>
+        <div class="page-header">
+          <h2>Audit Logs</h2>
+          <p>Append-only record of every write action in GateKeeper — who, what, and when. Supervisor access only.</p>
+        </div>
+
+        <div id="accessDenied" style="display:none;">
+          <div class="card panel">
+            <div class="empty-state">
+              <i class="fa-solid fa-lock"></i>
+              <h4>Supervisor access required</h4>
+              <p>Your account role doesn't have permission to view audit logs.</p>
+            </div>
+          </div>
+        </div>
+
+        <div id="auditContent" style="display:none;">
+          <div class="filter-bar">
+            <div class="search-box" style="background:var(--grey-bg);">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="searchInput" placeholder="Search by actor or entity ID...">
+            </div>
+            <select id="actionFilter"><option value="">All Actions</option></select>
+            <span class="result-count" id="resultCount">0 entries</span>
+          </div>
+
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead><tr><th>Actor</th><th>Action</th><th>Entity</th><th>Timestamp</th><th>Details</th></tr></thead>
+              <tbody id="auditTableBody"></tbody>
+            </table>
+            <div id="emptyState" style="display:none;"></div>
+          </div>
+
+          <div class="pagination" id="pagination"></div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+<script src="gatekeeper-auth-adapter.js"></script>
+<script src="gatekeeper-data.js"></script>
+<script src="gatekeeper.js"></script>
+<script>
+  const session = requireAuth();
+  if (session) {
+    initShell("audit-logs", { showSearch: false });
+
+    if (session.role !== "Supervisor") {
+      document.getElementById("accessDenied").style.display = "block";
+    } else {
+      document.getElementById("auditContent").style.display = "block";
+
+      const PER_PAGE = 15;
+      let currentPage = 1;
+      const searchInput = document.getElementById("searchInput");
+      const actionFilter = document.getElementById("actionFilter");
+
+      const actions = [...new Set(getAuditLog().map(a => a.action))].sort();
+      actionFilter.innerHTML += actions.map(a => `<option value="${a}">${a.replace(/_/g, " ")}</option>`).join("");
+
+      function getFiltered() {
+        const q = searchInput.value.trim().toLowerCase();
+        const action = actionFilter.value;
+        return getAuditLog().filter(a => {
+          if (q && !((a.actorName || "").toLowerCase().includes(q) || String(a.entityId || "").toLowerCase().includes(q))) return false;
+          if (action && a.action !== action) return false;
+          return true;
+        });
+      }
+
+      function render() {
+        const filtered = getFiltered();
+        document.getElementById("resultCount").textContent = `${filtered.length} entr${filtered.length !== 1 ? "ies" : "y"}`;
+        const tbody = document.getElementById("auditTableBody");
+        const emptyState = document.getElementById("emptyState");
+        const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+        if (currentPage > totalPages) currentPage = totalPages;
+
+        if (filtered.length === 0) {
+          tbody.innerHTML = "";
+          emptyState.style.display = "block";
+          emptyState.innerHTML = `<div class="empty-state"><i class="fa-solid fa-shield-halved"></i><h4>No audit entries found</h4><p>Try adjusting your search or filters.</p></div>`;
+          document.getElementById("pagination").innerHTML = "";
+          return;
+        }
+        emptyState.style.display = "none";
+
+        const pageItems = paginate(filtered, currentPage, PER_PAGE);
+        tbody.innerHTML = pageItems.map(a => `
+          <tr>
+            <td class="person-cell"><div class="mini-avatar">${initials(a.actorName || "SY")}</div><div class="p-name">${a.actorName || "System"}</div></td>
+            <td><span class="badge badge-hostel"><i></i>${a.action.replace(/_/g, " ")}</span></td>
+            <td>${a.entityType || "—"} · ${a.entityId ?? "—"}</td>
+            <td>${fmtDateTime(a.timestamp)}</td>
+            <td class="action-cell"><button class="btn btn-ghost btn-sm view-btn" data-id="${a.id}"><i class="fa-solid fa-eye"></i></button></td>
+          </tr>`).join("");
+
+        tbody.querySelectorAll(".view-btn").forEach(btn => {
+          btn.addEventListener("click", () => {
+            const entry = getAuditLog().find(x => x.id === parseInt(btn.dataset.id, 10));
+            openDetailsModal({
+              title: `Audit Entry #${entry.id}`,
+              bodyHtml: `
+                <div class="detail-grid">
+                  <div class="d-item"><span>Actor</span><p>${entry.actorName || "System"}</p></div>
+                  <div class="d-item"><span>Action</span><p>${entry.action.replace(/_/g, " ")}</p></div>
+                  <div class="d-item"><span>Entity Type</span><p>${entry.entityType || "—"}</p></div>
+                  <div class="d-item"><span>Entity ID</span><p>${entry.entityId ?? "—"}</p></div>
+                  <div class="d-item"><span>Timestamp</span><p>${fmtDateTime(entry.timestamp)}</p></div>
+                </div>
+                <p style="margin-top:16px; font-size:11px; text-transform:uppercase; letter-spacing:0.4px; color:var(--grey-light); font-weight:700;">Before</p>
+                <div class="diff-block">${entry.before ? JSON.stringify(entry.before, null, 2) : "null"}</div>
+                <p style="margin-top:12px; font-size:11px; text-transform:uppercase; letter-spacing:0.4px; color:var(--grey-light); font-weight:700;">After</p>
+                <div class="diff-block">${entry.after ? JSON.stringify(entry.after, null, 2) : "null"}</div>
+              `
+            });
+          });
+        });
+
+        buildPagination(document.getElementById("pagination"), filtered.length, PER_PAGE, currentPage, (p) => { currentPage = p; render(); });
+      }
+
+      searchInput.addEventListener("input", () => { currentPage = 1; render(); });
+      actionFilter.addEventListener("change", () => { currentPage = 1; render(); });
+      render();
+    }
+  }
+</script>
+</body>
+</html>

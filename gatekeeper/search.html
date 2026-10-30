@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Search | GateKeeper</title>
+<link rel="stylesheet" href="gatekeeper-style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="topbar-root"></div>
+
+      <main class="page">
+        <div class="breadcrumb"><a href="dashboard.html">Dashboard</a> <i class="fa-solid fa-chevron-right"></i> Search</div>
+        <div class="page-header">
+          <h2>Unified Search</h2>
+          <p>Search across students, visitors, and gate log history in one place.</p>
+        </div>
+
+        <div class="filter-bar">
+          <div class="search-box" style="background:var(--grey-bg); width:100%; max-width:520px;">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="searchInput" placeholder="Search by name, roll number, or phone...">
+          </div>
+        </div>
+
+        <div id="resultsWrap"></div>
+      </main>
+    </div>
+  </div>
+
+<script src="gatekeeper-auth-adapter.js"></script>
+<script src="gatekeeper-data.js"></script>
+<script src="gatekeeper.js"></script>
+<script>
+  const session = requireAuth();
+  if (session) {
+    initShell("search", { showSearch: false });
+
+    const searchInput = document.getElementById("searchInput");
+    const resultsWrap = document.getElementById("resultsWrap");
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("q")) searchInput.value = params.get("q");
+
+    function panel(title, iconClass, bodyHtml) {
+      return `<div class="card panel" style="margin-bottom:20px;">
+        <div class="panel-title"><span><i class="fa-solid ${iconClass}" style="color:var(--royal-blue); margin-right:8px;"></i>${title}</span></div>
+        ${bodyHtml}
+      </div>`;
+    }
+
+    function runSearch() {
+      const q = searchInput.value.trim();
+      if (!q) {
+        resultsWrap.innerHTML = `<div class="empty-state"><i class="fa-solid fa-magnifying-glass"></i><h4>Start typing to search</h4><p>Results from students, visitors, and gate logs will appear here.</p></div>`;
+        return;
+      }
+      const qLower = q.toLowerCase();
+      let html = "";
+
+      /* Student result — via the ERPAdapter, never touches ERP storage directly here */
+      const student = getStudent(q);
+      if (student) {
+        const status = getStudentCurrentStatus(student.roll);
+        html += panel("Student Match", "fa-user-graduate", `
+          <div class="person-summary" style="cursor:default;">
+            <div class="mini-avatar">${initials(student.name)}</div>
+            <div><h3>${student.name}</h3><p>${student.roll} · ${student.dept || "—"} · Room ${student.room || "—"}, Block ${student.block || "—"}</p></div>
+            <span class="status-pill ${status === "In Hostel" ? "in" : "out"}">${status}</span>
+          </div>
+          <div style="display:flex; gap:10px; margin-top:10px;">
+            <a href="student-entry.html" class="btn btn-outline btn-sm"><i class="fa-solid fa-right-to-bracket"></i> Log Entry</a>
+            <a href="student-exit.html" class="btn btn-outline btn-sm"><i class="fa-solid fa-right-from-bracket"></i> Log Exit</a>
+          </div>
+        `);
+      }
+
+      /* Visitor matches */
+      const visitorMatches = getVisitors().filter(v => v.name.toLowerCase().includes(qLower) || v.phone.includes(q)).slice(0, 5);
+      if (visitorMatches.length > 0) {
+        html += panel("Visitor Matches", "fa-people-group", `
+          <div class="table-wrap"><table class="data-table"><thead><tr><th>Visitor</th><th>Phone</th><th>Status</th><th>Last Seen</th></tr></thead>
+          <tbody>${visitorMatches.map(v => `
+            <tr>
+              <td class="person-cell"><div class="mini-avatar">${initials(v.name)}</div><div class="p-name">${v.name}</div></td>
+              <td>${v.phone}</td>
+              <td>${visitorStatusBadge(v.status)}</td>
+              <td>${fmtDateTime(v.status === "in" ? v.entryTime : v.exitTime)}</td>
+            </tr>`).join("")}</tbody></table></div>
+        `);
+      }
+
+      /* Gate log matches */
+      const logMatches = getGateLog().filter(e => (e.name || "").toLowerCase().includes(qLower) || (e.identifier || "").toLowerCase().includes(q)).slice(0, 8);
+      if (logMatches.length > 0) {
+        html += panel("Gate Log History", "fa-clipboard-list", `
+          <div class="table-wrap"><table class="data-table"><thead><tr><th>Person</th><th>Type</th><th>Direction</th><th>Timestamp</th></tr></thead>
+          <tbody>${logMatches.map(e => `
+            <tr>
+              <td class="person-cell"><div class="mini-avatar">${initials(e.name || "??")}</div><div class="p-name">${e.name}</div></td>
+              <td style="text-transform:capitalize;">${e.personType}</td>
+              <td>${directionBadge(e.direction)}</td>
+              <td>${fmtDateTime(e.timestamp)}</td>
+            </tr>`).join("")}</tbody></table></div>
+        `);
+      }
+
+      if (!html) {
+        resultsWrap.innerHTML = `<div class="empty-state"><i class="fa-solid fa-magnifying-glass-minus"></i><h4>No results for "${q}"</h4><p>Try a different name, roll number, or phone number.</p></div>`;
+        return;
+      }
+      resultsWrap.innerHTML = html;
+    }
+
+    searchInput.addEventListener("input", runSearch);
+    runSearch();
+  }
+</script>
+</body>
+</html>

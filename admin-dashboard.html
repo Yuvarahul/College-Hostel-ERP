@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard | HostelERP Admin Portal</title>
+<link rel="stylesheet" href="warden_dashboard.css">
+<link rel="stylesheet" href="admin-section.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+<div class="app-shell">
+  <div id="sidebar-root"></div>
+
+  <div class="main-content">
+    <div id="topbar-root"></div>
+
+    <main class="page">
+      <div class="greeting-banner">
+        <div>
+          <h2 id="greetingText">Admin Dashboard</h2>
+          <p>Students, wardens, gatekeepers, rooms, warden approvals, outpass / leave reports and audit logs.</p>
+        </div>
+        <i class="fa-solid fa-user-shield greet-icon"></i>
+      </div>
+
+      <!-- Pending warden approvals call-out -->
+      <section class="card panel" id="approvalAlert" style="display:none;border-left:4px solid #f59e0b;margin-bottom:18px">
+        <div class="panel-title">
+          <span><i class="fa-solid fa-user-check"></i> Warden approvals waiting</span>
+          <a class="btn-primary" href="admin-warden-approvals.html">Review now</a>
+        </div>
+        <p class="muted" id="approvalAlertText" style="margin:6px 0 0"></p>
+      </section>
+
+      <!-- Headline counters -->
+      <div class="admin-stat-strip" id="statStrip">
+        <div class="admin-stat info"><b id="cStudents">0</b><span>Students</span></div>
+        <div class="admin-stat info"><b id="cWardens">0</b><span>Wardens</span></div>
+        <div class="admin-stat info"><b id="cGate">0</b><span>Gatekeepers</span></div>
+        <div class="admin-stat info"><b id="cRooms">0</b><span>Rooms</span></div>
+        <div class="admin-stat warn"><b id="cPendingWardens">0</b><span>Warden Approvals</span></div>
+        <div class="admin-stat ok"><b id="cAvailRooms">0</b><span>Rooms Available</span></div>
+      </div>
+
+      <!-- Outpass / Leave snapshot -->
+      <section class="card panel" style="margin-bottom:18px">
+        <div class="panel-title">
+          <span>Outpass &amp; Leave Summary</span>
+          <a class="btn-small" href="admin-reports.html">Full report <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+        <div class="report-split" style="margin-top:14px">
+          <div class="report-card">
+            <h4><i class="fa-solid fa-door-open"></i> Outpass</h4>
+            <div class="report-line"><span>Approved</span><b id="oApproved" style="color:#166534">0</b></div>
+            <div class="report-line"><span>Rejected</span><b id="oRejected" style="color:#991b1b">0</b></div>
+            <div class="report-line"><span>Pending</span><b id="oPending" style="color:#92400e">0</b></div>
+            <div class="report-line"><span>Total</span><b id="oTotal">0</b></div>
+          </div>
+          <div class="report-card">
+            <h4><i class="fa-solid fa-plane-departure"></i> Leave</h4>
+            <div class="report-line"><span>Approved</span><b id="lApproved" style="color:#166534">0</b></div>
+            <div class="report-line"><span>Rejected</span><b id="lRejected" style="color:#991b1b">0</b></div>
+            <div class="report-line"><span>Pending</span><b id="lPending" style="color:#92400e">0</b></div>
+            <div class="report-line"><span>Total</span><b id="lTotal">0</b></div>
+          </div>
+          <div class="report-card">
+            <h4><i class="fa-solid fa-user-graduate"></i> Student Registrations</h4>
+            <div class="report-line"><span>Approved</span><b id="sApproved" style="color:#166534">0</b></div>
+            <div class="report-line"><span>Pending</span><b id="sPending" style="color:#92400e">0</b></div>
+            <div class="report-line"><span>Rejected</span><b id="sRejected" style="color:#991b1b">0</b></div>
+            <div class="report-line"><span>Total</span><b id="sTotal">0</b></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Modules -->
+      <section class="card panel">
+        <div class="panel-title"><span>Admin Modules</span></div>
+        <div class="module-grid" style="margin-top:14px">
+          <a class="module-tile" href="admin-students.html">
+            <i class="fa-solid fa-users"></i>
+            <div><strong>Student Details</strong><small>Profiles, rooms, request history</small></div>
+          </a>
+          <a class="module-tile" href="admin-wardens-management.html">
+            <i class="fa-solid fa-user-tie"></i>
+            <div><strong>Warden Details</strong><small>Accounts, blocks and shifts</small></div>
+          </a>
+          <a class="module-tile" href="admin-gate-staff.html">
+            <i class="fa-solid fa-shield-halved"></i>
+            <div><strong>Gatekeeper Details</strong><small>Gate staff, gates and shifts</small></div>
+          </a>
+          <a class="module-tile" href="admin-warden-approvals.html">
+            <i class="fa-solid fa-user-check"></i>
+            <div><strong>Warden Approvals</strong><small>Approve or reject new wardens</small></div>
+          </a>
+          <a class="module-tile" href="admin-rooms-management.html">
+            <i class="fa-solid fa-bed"></i>
+            <div><strong>Room Details</strong><small>Blocks, occupancy, allotment</small></div>
+          </a>
+          <a class="module-tile" href="admin-reports.html">
+            <i class="fa-solid fa-chart-column"></i>
+            <div><strong>Outpass / Leave Reports</strong><small>Approved and rejected requests</small></div>
+          </a>
+          <a class="module-tile" href="admin-audit-logs.html">
+            <i class="fa-solid fa-clipboard-list"></i>
+            <div><strong>Audit Logs</strong><small>Every admin action</small></div>
+          </a>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script src="js/script.js"></script>
+<script src="warden_dashboard.js"></script>
+<script src="admin-shell.js"></script>
+<script>
+(async () => {
+  const admin = initAdminShell("dashboard", { showSearch: false });
+  if (!admin) return;
+
+  document.getElementById("greetingText").textContent =
+    `Welcome, ${(admin.name || "Admin").split(" ")[0]}`;
+
+  const API = (window.location.port === "3000") ? "" : "http://localhost:3000";
+  const headers = { "x-admin-id": localStorage.getItem("hostelERP_adminSession") || "" };
+  const set = (id, value) => { const n = document.getElementById(id); if (n) n.textContent = value; };
+
+  try {
+    const res = await fetch(`${API}/api/admin-management/overview`, { headers });
+    const body = await res.json();
+    if (!res.ok || !body.success) throw new Error(body.message || "Unable to load dashboard data.");
+    const o = body.overview;
+
+    set("cStudents", o.students.total);
+    set("cWardens", o.wardens.total);
+    set("cGate", o.gatekeepers.total);
+    set("cRooms", o.rooms.total);
+    set("cPendingWardens", o.wardens.pending);
+    set("cAvailRooms", o.rooms.available);
+
+    set("oApproved", o.outpass.approved); set("oRejected", o.outpass.rejected);
+    set("oPending", o.outpass.pending);   set("oTotal", o.outpass.total);
+    set("lApproved", o.leave.approved);   set("lRejected", o.leave.rejected);
+    set("lPending", o.leave.pending);     set("lTotal", o.leave.total);
+    set("sApproved", o.students.approved); set("sPending", o.students.pending);
+    set("sRejected", o.students.rejected); set("sTotal", o.students.total);
+
+    if (o.wardens.pending > 0) {
+      document.getElementById("approvalAlert").style.display = "block";
+      document.getElementById("approvalAlertText").textContent =
+        `${o.wardens.pending} warden registration${o.wardens.pending === 1 ? " is" : "s are"} waiting for your approval. Until approved, those accounts cannot log in.`;
+    }
+  } catch (e) {
+    console.error(e);
+    if (typeof showToast === "function") showToast("error", "Dashboard", e.message);
+  }
+})();
+</script>
+</body>
+</html>

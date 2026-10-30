@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leave Requests | HostelERP Warden Portal</title>
+  <link rel="stylesheet" href="warden_dashboard.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    .request-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 18px;
+    }
+
+    .request-card {
+      background: var(--white);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      padding: 20px;
+      transition: var(--transition);
+      border: 1px solid rgba(11, 61, 145, 0.06);
+    }
+
+    .request-card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-3px);
+    }
+
+    .request-card .rc-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .request-card .rc-head h4 {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .request-card .rc-head p {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .rc-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      padding: 6px 0;
+      border-bottom: 1px dashed rgba(11, 61, 145, 0.08);
+    }
+
+    .rc-row span:first-child {
+      color: var(--text-muted);
+    }
+
+    .rc-row span:last-child {
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .rc-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .rc-actions .btn {
+      flex: 1;
+      padding: 8px;
+      font-size: 11.5px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+
+    <div class="main-content">
+      <div id="topbar-root"></div>
+
+      <main class="page">
+        <div class="breadcrumb"><a href="warden_dashboard.html">Dashboard</a> <i class="fa-solid fa-chevron-right"></i>
+          <a href="pending-requests.html">Pending Requests</a> <i class="fa-solid fa-chevron-right"></i> Leave Requests
+        </div>
+        <div class="page-header">
+          <h2>Leave Requests</h2>
+          <p>Approve or reject student leave requests.</p>
+        </div>
+
+        <div class="filter-bar">
+          <select id="statusFilter">
+            <option value="">All Statuses</option>
+            <option value="Pending" selected>Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+          <span class="result-count" id="resultCount">0 requests</span>
+        </div>
+
+        <div class="request-grid" id="requestGrid"></div>
+        <div class="pagination" id="pagination"></div>
+      </main>
+    </div>
+  </div>
+
+  <script src="students.js"></script>
+  <script src="registrations.js"></script>
+  <script src="warden_dashboard.js"></script>
+  <script>
+    initShell("pending", { showSearch: false });
+
+    const LEAVE_API_BASE = (window.location.port === "3000") ? "" : "http://localhost:3000";
+    const PER_PAGE = 9;
+    let currentPage = 1;
+    let allLeaves = [];
+
+    const statusFilter = document.getElementById("statusFilter");
+
+    async function fetchLeaves() {
+      try {
+        const res = await fetch(`${LEAVE_API_BASE}/api/leave`);
+        const data = await res.json();
+        allLeaves = data.leaves || [];
+      } catch (err) {
+        console.error("fetchLeaves error:", err);
+        allLeaves = [];
+      }
+    }
+
+    function getFiltered() {
+      const status = statusFilter.value;
+      return allLeaves.filter(s => {
+        if (status && String(s.status || "").toLowerCase() !== status.toLowerCase()) return false;
+        return true;
+      }).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    }
+
+    async function render() {
+      const filtered = getFiltered();
+      document.getElementById("resultCount").textContent = `${filtered.length} request${filtered.length !== 1 ? "s" : ""}`;
+      const grid = document.getElementById("requestGrid");
+      const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><i class="fa-solid fa-calendar-xmark"></i><h4>No leave requests</h4><p>Try adjusting your search or filter.</p></div>`;
+        document.getElementById("pagination").innerHTML = "";
+        return;
+      }
+
+      const pageItems = paginate(filtered, currentPage, PER_PAGE);
+      grid.innerHTML = pageItems.map(s => `
+      <div class="request-card">
+        <div class="rc-head">
+          <div class="mini-avatar">${initials(s.name || "Student")}</div>
+          <div>
+            <h4>${s.name || "Student"}</h4>
+            <p>${s.roll_no || s.student_id} · Room ${s.room_no || "N/A"}</p>
+          </div>
+          <div style="margin-left:auto;">${statusBadge(s.status)}</div>
+        </div>
+        <div class="rc-row"><span>Reason</span><span>${s.reason || "—"}</span></div>
+        <div class="rc-row"><span>From Date</span><span>${s.from_date || "—"}</span></div>
+        <div class="rc-row"><span>To Date</span><span>${s.to_date || "—"}</span></div>
+        ${s.token_no ? `<div class="rc-row"><span>Token No</span><span style="color:var(--royal-blue);">${s.token_no}</span></div>` : ""}
+        ${s.rejection_reason ? `<div class="rc-row"><span>Rejection</span><span style="color:#991B1B;">${s.rejection_reason}</span></div>` : ""}
+        <div class="rc-actions">
+          <button class="btn btn-success" ${s.status === "Approved" ? "disabled" : ""} onclick="approveReq('${s.id}')"><i class="fa-solid fa-check"></i> Approve</button>
+          <button class="btn btn-danger" ${s.status === "Rejected" ? "disabled" : ""} onclick="rejectReq('${s.id}')"><i class="fa-solid fa-xmark"></i> Reject</button>
+          <button class="btn btn-ghost" onclick="viewDetails('${s.id}')"><i class="fa-solid fa-eye"></i></button>
+        </div>
+      </div>`).join("");
+
+      buildPagination(document.getElementById("pagination"), filtered.length, PER_PAGE, currentPage, (p) => { currentPage = p; render(); window.scrollTo({ top: 0, behavior: "smooth" }); });
+    }
+
+    function approveReq(id) {
+      const s = allLeaves.find(x => String(x.id) === String(id));
+      if (!s) return;
+
+      openConfirmModal({
+        title: "Approve leave?",
+        message: `Approve leave request for ${s.name}?`,
+        confirmLabel: "Approve", confirmClass: "btn-success",
+        onConfirm: async () => {
+          try {
+            const res = await fetch(`${LEAVE_API_BASE}/api/leave/${id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ status: "Approved", approved_by: WARDEN.name })
+            });
+            const result = await res.json();
+            if (!res.ok || !result.success) throw new Error(result.message);
+
+            showToast("success", "Leave approved", `${s.name}'s request approved. Token: ${result.leave?.token_no || ""}`);
+            await fetchLeaves();
+            render();
+          } catch (err) {
+            showToast("error", "Error", err.message || "Failed to approve leave");
+          }
+        }
+      });
+    }
+
+    function rejectReq(id) {
+      const s = allLeaves.find(x => String(x.id) === String(id));
+      if (!s) return;
+      openRejectModal(s);
+    }
+
+    /* ---------- Reject modal with reason ---------- */
+    function openRejectModal(s) {
+      let overlay = document.getElementById("rejectModalOverlay");
+      if (!overlay) {
+        overlay = document.createElement("div");
+        overlay.className = "modal-overlay";
+        overlay.id = "rejectModalOverlay";
+        document.body.appendChild(overlay);
+        overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.classList.remove("open"); });
+      }
+      overlay.innerHTML = `
+      <div class="modal-box">
+        <div class="modal-header">
+          <h3>Reject Leave · ${s.name}</h3>
+          <button class="modal-close" onclick="document.getElementById('rejectModalOverlay').classList.remove('open')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <label>Reason for Rejection</label>
+            <select id="rejectReasonSelect">
+              <option>Insufficient Reason Provided</option>
+              <option>Overlaps With Exam Schedule</option>
+              <option>Parent/Guardian Confirmation Pending</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="document.getElementById('rejectModalOverlay').classList.remove('open')">Cancel</button>
+          <button class="btn btn-danger" id="confirmRejectBtn"><i class="fa-solid fa-xmark"></i> Reject Leave</button>
+        </div>
+      </div>`;
+
+      document.getElementById("confirmRejectBtn").addEventListener("click", async () => {
+        const reason = document.getElementById("rejectReasonSelect").value;
+        try {
+          const res = await fetch(`${LEAVE_API_BASE}/api/leave/${s.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "Rejected", rejection_reason: reason, approved_by: WARDEN.name })
+          });
+          const result = await res.json();
+          if (!res.ok || !result.success) throw new Error(result.message);
+
+          overlay.classList.remove("open");
+          showToast("error", "Leave rejected", `${s.name}'s request has been rejected.`);
+          await fetchLeaves();
+          render();
+        } catch (err) {
+          showToast("error", "Error", err.message || "Failed to reject leave");
+        }
+      });
+
+      overlay.classList.add("open");
+    }
+
+    function viewDetails(id) {
+      const s = allLeaves.find(x => String(x.id) === String(id));
+      if (!s) return;
+
+      openDetailsModal({
+        title: `Leave · ${s.name}`,
+        bodyHtml: `
+        <div class="detail-grid">
+          <div class="d-item"><span>Roll Number</span><p>${s.roll_no || s.student_id}</p></div>
+          <div class="d-item"><span>Room</span><p>${s.room_no || "Not Allocated"}</p></div>
+          <div class="d-item"><span>Status</span><p>${s.status}</p></div>
+          <div class="d-item" style="grid-column:1/-1;"><span>Reason</span><p>${s.reason}</p></div>
+          <div class="d-item"><span>From Date</span><p>${s.from_date}</p></div>
+          <div class="d-item"><span>To Date</span><p>${s.to_date}</p></div>
+          ${s.token_no ? `<div class="d-item"><span>Token Number</span><p style="color:var(--royal-blue); font-weight:700;">${s.token_no}</p></div>` : ""}
+          ${s.rejection_reason ? `<div class="d-item" style="grid-column:1/-1;"><span>Rejection Reason</span><p style="color:#991B1B;">${s.rejection_reason}</p></div>` : ""}
+        </div>`,
+        footerHtml: `<a href="student-profile.html?roll=${s.roll_no || s.student_id}" class="btn btn-outline">Full Profile</a><button class="btn btn-primary" onclick="closeDetailsModal()">Close</button>`
+      });
+    }
+
+    statusFilter.addEventListener("change", () => { currentPage = 1; render(); });
+
+    fetchLeaves().then(() => render());
+  </script>
+</body>
+
+</html>

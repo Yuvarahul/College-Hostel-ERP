@@ -1,0 +1,22 @@
+STUDENT REGISTRATION FIX
+
+Restart the backend after extracting this project:
+
+cd updateprj\backend
+node server.js
+
+Then open:
+http://localhost:3000/student-register.html
+
+IMPORTANT:
+- Do not open student-register.html with file://.
+- Keep node server.js running.
+- Passport photo: JPG/PNG, max 2 MB.
+- ID proof: JPG/PNG/PDF, max 2 MB.
+- A student selected from the autocomplete is already present in students.csv.
+  Selecting an existing student and submitting with the same admission number
+  will correctly show "Admission Number Already Exists". It is not a new registration.
+- For a NEW registration, use an admission number not already in students.csv.
+
+This version also writes the CSV safely with the passport_photo column and
+returns the actual backend error during development instead of only "Server Error".

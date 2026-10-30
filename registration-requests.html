@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registration Requests | HostelERP Warden Portal</title>
+  <link rel="stylesheet" href="warden_dashboard.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    .reg-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 18px;
+    }
+
+    .reg-card {
+      background: var(--white);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      padding: 20px;
+      transition: var(--transition);
+      border: 1px solid rgba(11, 61, 145, 0.06);
+    }
+
+    .reg-card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-3px);
+    }
+
+    .reg-card .rc-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .reg-card .rc-head h4 {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .reg-card .rc-head p {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .reg-card .rc-type {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .rc-type.fresher {
+      background: var(--info-bg);
+      color: #1D4ED8;
+    }
+
+    .rc-type.senior {
+      background: var(--sky-blue);
+      color: var(--royal-blue);
+    }
+
+    .rc-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      padding: 6px 0;
+      border-bottom: 1px dashed rgba(11, 61, 145, 0.08);
+    }
+
+    .rc-row span:first-child {
+      color: var(--text-muted);
+    }
+
+    .rc-row span:last-child {
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .rc-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .rc-actions .btn {
+      flex: 1;
+      padding: 8px;
+      font-size: 11.5px;
+    }
+
+    .form-row {
+      margin-bottom: 14px;
+    }
+
+    .form-row label {
+      display: block;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-bottom: 6px;
+    }
+
+    .form-row select,
+    .form-row input {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      border: 1.5px solid rgba(11, 61, 145, 0.12);
+      background: var(--white);
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 13px;
+    }
+
+    .form-row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+
+    <div class="main-content">
+      <div id="topbar-root"></div>
+
+      <main class="page">
+        <div class="breadcrumb"><a href="warden_dashboard.html">Dashboard</a> <i class="fa-solid fa-chevron-right"></i>
+          Registration Requests</div>
+        <div class="page-header">
+          <h2>Registration Requests</h2>
+          <p>Review, approve, or reject new student hostel registrations.</p>
+        </div>
+
+
+        <div class="reg-grid" id="regGrid"></div>
+        <div class="pagination" id="pagination"></div>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="students.js"></script>
+  <script src="registrations.js"></script>
+  <script src="rooms.js"></script>
+  <script src="warden_dashboard.js"></script>
+  <script>
+    initShell("registrations", { showSearch: false });
+
+    const PER_PAGE = 9;
+    let currentPage = 1;
+
+    function getFiltered() {
+      return getRegistrations()
+        .filter(r => String(r.status || "").trim().toLowerCase() === "pending")
+        .sort((a, b) => new Date(b.registeredAt) - new Date(a.registeredAt));
+    }
+
+    function render() {
+      const filtered = getFiltered();
+      const grid = document.getElementById("regGrid");
+      const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><i class="fa-solid fa-clipboard-check"></i><h4>No pending requests</h4><p>There are no registration requests currently awaiting warden approval.</p></div>`;
+        document.getElementById("pagination").innerHTML = "";
+        return;
+      }
+
+      const pageItems = paginate(filtered, currentPage, PER_PAGE);
+      grid.innerHTML = pageItems.map(r => `
+      <div class="reg-card">
+        <div class="rc-head">
+          <div class="mini-avatar">${initials(r.name)}</div>
+          <div>
+            <h4>${r.name}</h4>
+            <p>${r.hostellerType === "Fresher" ? r.admissionNo : r.roll} · ${r.dept}</p>
+          </div>
+          <div style="margin-left:auto; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+            <span class="rc-type ${r.hostellerType.toLowerCase()}">${r.hostellerType}</span>
+            ${statusBadge(r.status)}
+          </div>
+        </div>
+        <div class="rc-row"><span>Year</span><span>${r.year}</span></div>
+        <div class="rc-row"><span>Room</span><span>${r.room || "Not Allocated"}</span></div>
+        <div class="rc-row"><span>Phone</span><span>${r.phone}</span></div>
+        ${r.status === "Rejected" ? `<div class="rc-row"><span>Reason</span><span>${r.rejectionReason}</span></div>` : ""}
+        <div class="rc-actions">
+          <button class="btn btn-success" ${r.status === "Approved" ? "disabled" : ""} onclick="handleApprove(${r.id})"><i class="fa-solid fa-check"></i> Approve</button>
+          <button class="btn btn-danger" ${r.status === "Rejected" ? "disabled" : ""} onclick="handleReject(${r.id})"><i class="fa-solid fa-xmark"></i> Reject</button>
+          <button class="btn btn-ghost" onclick="viewDetails(${r.id})"><i class="fa-solid fa-eye"></i></button>
+        </div>
+      </div>`).join("");
+
+      buildPagination(document.getElementById("pagination"), filtered.length, PER_PAGE, currentPage, (p) => { currentPage = p; render(); window.scrollTo({ top: 0, behavior: "smooth" }); });
+    }
+
+    async function viewDetails(id) {
+      const r = findRegistration(id);
+      // Every pending registration must receive a room before approval.
+      // The Eye icon opens the complete student-details + room-allocation flow
+      // in this same modal; no separate room-allocation page is required.
+      const needsAllocation = String(r.status || "").toLowerCase() === "pending";
+
+      // Room data is loaded asynchronously by rooms.js. Make sure it is ready
+      // before building the Block/Floor/Room/Bed controls.
+      if (needsAllocation && typeof fetchRoomsFromBackend === "function") {
+        await fetchRoomsFromBackend();
+      }
+
+      openDetailsModal({
+        title: `Registration · ${r.name}`,
+        bodyHtml: `
+        <div style="display:flex; gap:16px; align-items:flex-start; margin-bottom:16px; padding-bottom:14px; border-bottom:1px dashed rgba(11,61,145,0.14);">
+          <div style="width:78px;height:96px;border-radius:10px;overflow:hidden;background:var(--grey-bg);display:flex;align-items:center;justify-content:center;flex:none;border:1px solid rgba(11,61,145,0.10);">
+            ${r.passportPhoto ? `<img src="${String(r.passportPhoto).startsWith("/") ? r.passportPhoto : `${REG_API_BASE}/uploads/students/${encodeURIComponent(String(r.passportPhoto).split("/").pop())}`}" alt="Student Photo" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">` : ""}
+            <span style="display:${r.passportPhoto ? "none" : "flex"};align-items:center;justify-content:center;width:100%;height:100%;font-size:24px;color:var(--grey-light);"><i class="fa-solid fa-user"></i></span>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:11px;text-transform:uppercase;color:var(--grey-light);font-weight:700;letter-spacing:.4px;">Student</div>
+            <div style="font-size:18px;font-weight:700;color:var(--text-main);margin-top:3px;">${r.name}</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">${r.hostellerType} · ${r.dept}</div>
+          </div>
+        </div>
+        <div class="detail-grid">
+          <div class="d-item"><span>Student Name</span><p>${r.name}</p></div>
+          <div class="d-item"><span>Hosteller Type</span><p>${r.hostellerType}</p></div>
+          <div class="d-item"><span>${r.hostellerType === "Fresher" ? "Admission No." : "Roll Number"}</span><p>${r.hostellerType === "Fresher" ? r.admissionNo : r.roll}</p></div>
+          <div class="d-item"><span>Department</span><p>${r.dept}</p></div>
+          <div class="d-item"><span>Year</span><p>${r.year}</p></div>
+          <div class="d-item"><span>Phone</span><p>${r.phone}</p></div>
+          <div class="d-item"><span>Parent Contact</span><p>${r.parentPhone}</p></div>
+          <div class="d-item"><span>Email</span><p>${r.email}</p></div>
+          <div class="d-item"><span>Room Number</span><p id="vdRoomNumber">${r.room || "Not Allocated"}</p></div>
+          <div class="d-item" style="grid-column:1/-1;"><span>Address</span><p>${r.address}</p></div>
+          <div class="d-item"><span>Registration Status</span><p>${r.status}</p></div>
+          ${r.status === "Rejected" ? `<div class="d-item"><span>Rejection Reason</span><p>${r.rejectionReason}</p></div>` : ""}
+        </div>
+
+        ${needsAllocation ? `
+        <div style="margin-top:22px; padding-top:18px; border-top:1px dashed rgba(11,61,145,0.14);">
+          <span style="display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; color:var(--royal-blue); text-transform:uppercase; letter-spacing:0.3px; margin-bottom:14px;"><i class="fa-solid fa-door-closed"></i> Room Allocation</span>
+          <p style="margin-bottom:14px;">Select the hostel block, floor, room and bed here. Approval is completed only after successful room allocation.</p>
+
+          <div class="form-row-2">
+            <div class="form-row">
+              <label>Step 1 · Block</label>
+              <select id="vdBlock">
+                <option value="">Select Block</option>
+                ${getHostelBlocks().map(b => `<option value="${b}">Block ${b}</option>`).join("")}
+              </select>
+            </div>
+            <div class="form-row">
+              <label>Step 2 · Floor</label>
+              <select id="vdFloor" disabled><option value="">Select Floor</option></select>
+            </div>
+          </div>
+          <div class="form-row-2">
+            <div class="form-row">
+              <label>Step 3 · Room</label>
+              <select id="vdRoom" disabled><option value="">Select Room</option></select>
+            </div>
+            <div class="form-row">
+              <label>Step 4 · Bed</label>
+              <select id="vdBed" disabled><option value="">Select Bed</option></select>
+            </div>
+          </div>
+
+          <div id="vdOccPanel" style="display:none; background:var(--grey-bg); border-radius:var(--radius-sm); padding:14px 16px;">
+            <div class="detail-grid" style="grid-template-columns:repeat(3,1fr); margin-top:0;">
+              <div class="d-item"><span>Room Capacity</span><p id="vdCapacity">–</p></div>
+              <div class="d-item"><span>Current Occupancy</span><p id="vdOccupied">–</p></div>
+              <div class="d-item"><span>Available Beds</span><p id="vdAvailable">–</p></div>
+            </div>
+          </div>
+          <div class="validation-msg" id="vdValidation" style="display:none; background:var(--danger-bg); color:#991B1B; border-radius:var(--radius-sm); padding:10px 14px; font-size:12px; margin-top:12px;"></div>
+        </div>` : ""}`,
+        footerHtml: needsAllocation
+          ? `<button class="btn btn-ghost" onclick="closeDetailsModal()">Cancel</button><button class="btn btn-primary" id="vdAllocateBtn" disabled><i class="fa-solid fa-door-closed"></i> Allocate Room &amp; Approve</button>`
+          : `<button class="btn btn-primary" onclick="closeDetailsModal()">Close</button>`
+      });
+
+      if (!needsAllocation) return;
+
+      const blockSel = document.getElementById("vdBlock");
+      const floorSel = document.getElementById("vdFloor");
+      const roomSel = document.getElementById("vdRoom");
+      const bedSel = document.getElementById("vdBed");
+      const assignBtn = document.getElementById("vdAllocateBtn");
+      const occPanel = document.getElementById("vdOccPanel");
+      const validationBox = document.getElementById("vdValidation");
+
+      function resetSelect(sel, placeholder) { sel.innerHTML = `<option value="">${placeholder}</option>`; sel.disabled = true; }
+
+      blockSel.addEventListener("change", () => {
+        resetSelect(floorSel, "Select Floor"); resetSelect(roomSel, "Select Room"); resetSelect(bedSel, "Select Bed");
+        occPanel.style.display = "none"; assignBtn.disabled = true;
+        if (!blockSel.value) return;
+        getFloorsForBlock(blockSel.value).forEach(f => floorSel.insertAdjacentHTML("beforeend", `<option value="${f}">Floor ${f}</option>`));
+        floorSel.disabled = false;
+      });
+
+      floorSel.addEventListener("change", () => {
+        resetSelect(roomSel, "Select Room"); resetSelect(bedSel, "Select Bed");
+        occPanel.style.display = "none"; assignBtn.disabled = true;
+        if (!floorSel.value) return;
+        getRoomNumbersForFloor(blockSel.value, floorSel.value).forEach(roomId => {
+          const info = getRoomInfo(roomId);
+          const full = info.status === "Full" || info.status === "Maintenance";
+          roomSel.insertAdjacentHTML("beforeend", `<option value="${roomId}" ${full ? "disabled" : ""}>${roomId} — ${info.occupied}/${info.capacity} occupied${info.status === "Maintenance" ? " (Maintenance)" : full ? " (Full)" : ""}</option>`);
+        });
+        roomSel.disabled = false;
+      });
+
+      roomSel.addEventListener("change", () => {
+        resetSelect(bedSel, "Select Bed");
+        assignBtn.disabled = true;
+        if (!roomSel.value) { occPanel.style.display = "none"; return; }
+        const info = getRoomInfo(roomSel.value);
+        document.getElementById("vdCapacity").textContent = info.capacity;
+        document.getElementById("vdOccupied").textContent = info.occupied;
+        document.getElementById("vdAvailable").textContent = info.available;
+        occPanel.style.display = "block";
+        availableBedsOfRoom(roomSel.value).forEach(b => bedSel.insertAdjacentHTML("beforeend", `<option value="${b}">Bed ${b}</option>`));
+        bedSel.disabled = false;
+      });
+
+      bedSel.addEventListener("change", () => { assignBtn.disabled = !bedSel.value; });
+
+      assignBtn.addEventListener("click", async () => {
+        try {
+          const result = await allocateRoomAndApprove(
+            r.id,
+            {
+              room: roomSel.value,
+              block: blockSel.value,
+              floor: floorSel.value,
+              bed: bedSel.value
+            }
+          );
+
+          if (!result) {
+            validationBox.textContent =
+              "That bed is no longer available — please pick another.";
+            validationBox.style.display = "block";
+            return;
+          }
+
+          closeDetailsModal();
+
+          showToast(
+            "success",
+            "Room Allocated Successfully",
+            `${r.name} assigned to Block ${blockSel.value}, Room ${roomSel.value}, Bed ${bedSel.value}.`
+          );
+
+          await fetchRegistrationsFromBackend();
+
+          render();
+          refreshRegBadge();
+
+        } catch (error) {
+          console.error("Approval error:", error);
+
+          validationBox.textContent =
+            error.message || "Could not approve student.";
+
+          validationBox.style.display = "block";
+        }
+      });
+
+      /* Give this modal a little extra width so the 4-column room-picker breathes */
+      const box = document.querySelector("#detailsModalOverlay .modal-box");
+      if (box) box.style.maxWidth = "760px";
+    }
+    async function handleApprove(id) {
+      const r = findRegistration(id);
+
+      if (!r) {
+        showToast("error", "Approval Failed", "Registration not found. Please refresh the page.");
+        return;
+      }
+
+      // Use the SAME details + room-allocation modal as the Eye button.
+      // There is intentionally no second/duplicate room-allocation modal.
+      await viewDetails(id);
+    }
+
+    function handleReject(id) {
+      const r = findRegistration(id);
+      openRejectModal(r);
+    }
+
+    /* ---------- ROOM ALLOCATION (Freshers) ----------
+       Step 1 Select Block -> Step 2 Available Floors -> Step 3 Available Rooms
+       -> Step 4 Available Beds -> Step 5 Capacity/Occupied/Available -> Step 6 Allocate */
+    function openAllocateRoomModal(r) {
+      let overlay = document.getElementById("allocateModalOverlay");
+      if (!overlay) {
+        overlay = document.createElement("div");
+        overlay.className = "modal-overlay";
+        overlay.id = "allocateModalOverlay";
+        document.body.appendChild(overlay);
+        overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.classList.remove("open"); });
+      }
+      overlay.innerHTML = `
+      <div class="modal-box" style="max-width:560px;">
+        <div class="modal-header">
+          <h3><i class="fa-solid fa-door-closed"></i> Room Allocation · ${r.name}</h3>
+          <button class="modal-close" onclick="document.getElementById('allocateModalOverlay').classList.remove('open')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+          <p>This student is a <strong>Fresher</strong> — a room must be allocated before the registration can be approved.</p>
+
+          <div class="form-row-2">
+            <div class="form-row">
+              <label>Step 1 · Block</label>
+              <select id="stepBlock">
+                <option value="">Select Block</option>
+                ${getHostelBlocks().map(b => `<option value="${b}">Block ${b}</option>`).join("")}
+              </select>
+            </div>
+            <div class="form-row">
+              <label>Step 2 · Floor</label>
+              <select id="stepFloor" disabled><option value="">Select Floor</option></select>
+            </div>
+          </div>
+          <div class="form-row-2">
+            <div class="form-row">
+              <label>Step 3 · Room</label>
+              <select id="stepRoom" disabled><option value="">Select Room</option></select>
+            </div>
+            <div class="form-row">
+              <label>Step 4 · Bed</label>
+              <select id="stepBed" disabled><option value="">Select Bed</option></select>
+            </div>
+          </div>
+
+          <div id="roomOccupancyPanel" style="display:none; background:var(--grey-bg); border-radius:var(--radius-sm); padding:14px 16px; margin-top:6px;">
+            <div class="detail-grid" style="grid-template-columns:repeat(3,1fr); margin-top:0;">
+              <div class="d-item"><span>Room Capacity</span><p id="occCapacity">–</p></div>
+              <div class="d-item"><span>Current Occupancy</span><p id="occOccupied">–</p></div>
+              <div class="d-item"><span>Available Beds</span><p id="occAvailable">–</p></div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="document.getElementById('allocateModalOverlay').classList.remove('open')">Cancel</button>
+          <button class="btn btn-primary" id="assignRoomBtn" disabled><i class="fa-solid fa-door-closed"></i> Allocate Room</button>
+        </div>
+      </div>`;
+
+      const blockSel = document.getElementById("stepBlock");
+      const floorSel = document.getElementById("stepFloor");
+      const roomSel = document.getElementById("stepRoom");
+      const bedSel = document.getElementById("stepBed");
+      const assignBtn = document.getElementById("assignRoomBtn");
+      const occPanel = document.getElementById("roomOccupancyPanel");
+
+      function resetSelect(sel, placeholder) { sel.innerHTML = `<option value="">${placeholder}</option>`; sel.disabled = true; }
+
+      blockSel.addEventListener("change", () => {
+        resetSelect(floorSel, "Select Floor"); resetSelect(roomSel, "Select Room"); resetSelect(bedSel, "Select Bed");
+        occPanel.style.display = "none"; assignBtn.disabled = true;
+        if (!blockSel.value) return;
+        getFloorsForBlock(blockSel.value).forEach(f => floorSel.insertAdjacentHTML("beforeend", `<option value="${f}">Floor ${f}</option>`));
+        floorSel.disabled = false;
+      });
+
+      floorSel.addEventListener("change", () => {
+        resetSelect(roomSel, "Select Room"); resetSelect(bedSel, "Select Bed");
+        occPanel.style.display = "none"; assignBtn.disabled = true;
+        if (!floorSel.value) return;
+        getRoomNumbersForFloor(blockSel.value, floorSel.value).forEach(roomId => {
+          const info = getRoomInfo(roomId);
+          const full = info.status === "Full" || info.status === "Maintenance";
+          roomSel.insertAdjacentHTML("beforeend", `<option value="${roomId}" ${full ? "disabled" : ""}>${roomId} — ${info.occupied}/${info.capacity} occupied${info.status === "Maintenance" ? " (Maintenance)" : full ? " (Full)" : ""}</option>`);
+        });
+        roomSel.disabled = false;
+      });
+
+      roomSel.addEventListener("change", () => {
+        resetSelect(bedSel, "Select Bed");
+        assignBtn.disabled = true;
+        if (!roomSel.value) { occPanel.style.display = "none"; return; }
+        const info = getRoomInfo(roomSel.value);
+        document.getElementById("occCapacity").textContent = info.capacity;
+        document.getElementById("occOccupied").textContent = info.occupied;
+        document.getElementById("occAvailable").textContent = info.available;
+        occPanel.style.display = "block";
+        availableBedsOfRoom(roomSel.value).forEach(b => bedSel.insertAdjacentHTML("beforeend", `<option value="${b}">Bed ${b}</option>`));
+        bedSel.disabled = false;
+      });
+
+      bedSel.addEventListener("change", () => { assignBtn.disabled = !bedSel.value; });
+
+      assignBtn.addEventListener("click", async () => {
+        try {
+          const result = await allocateRoomAndApprove(
+            r.id,
+            {
+              room: roomSel.value,
+              block: blockSel.value,
+              floor: floorSel.value,
+              bed: bedSel.value
+            }
+          );
+
+          if (!result) {
+            showToast(
+              "error",
+              "Allocation failed",
+              "That bed is no longer available — please pick another."
+            );
+            return;
+          }
+
+          overlay.classList.remove("open");
+
+          showToast(
+            "success",
+            "Room Allocated Successfully",
+            `${r.name} assigned to Block ${blockSel.value}, Room ${roomSel.value}, Bed ${bedSel.value}.`
+          );
+
+          await fetchRegistrationsFromBackend();
+
+          render();
+          refreshRegBadge();
+
+        } catch (error) {
+          console.error("Approval error:", error);
+
+          showToast(
+            "error",
+            "Approval Failed",
+            error.message || "Could not approve student."
+          );
+        }
+      });
+
+      overlay.classList.add("open");
+    }
+
+    /* ---------- Reject modal with reason ---------- */
+    function openRejectModal(r) {
+      let overlay = document.getElementById("rejectModalOverlay");
+      if (!overlay) {
+        overlay = document.createElement("div");
+        overlay.className = "modal-overlay";
+        overlay.id = "rejectModalOverlay";
+        document.body.appendChild(overlay);
+        overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.classList.remove("open"); });
+      }
+      overlay.innerHTML = `
+      <div class="modal-box">
+        <div class="modal-header">
+          <h3>Reject Registration · ${r.name}</h3>
+          <button class="modal-close" onclick="document.getElementById('rejectModalOverlay').classList.remove('open')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <label>Reason for Rejection</label>
+            <select id="rejectReasonSelect">
+              <option>Incomplete Documents</option>
+              <option>Invalid Roll Number</option>
+              <option>Duplicate Registration</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="document.getElementById('rejectModalOverlay').classList.remove('open')">Cancel</button>
+          <button class="btn btn-danger" id="confirmRejectBtn"><i class="fa-solid fa-xmark"></i> Reject Registration</button>
+        </div>
+      </div>`;
+
+      document.getElementById("confirmRejectBtn").addEventListener("click", () => {
+        const reason = document.getElementById("rejectReasonSelect").value;
+        rejectRegistration(r.id, reason);
+        overlay.classList.remove("open");
+        showToast("error", "Registration Rejected", `${r.name}'s registration was rejected — ${reason}.`);
+        render(); refreshRegBadge();
+      });
+
+      overlay.classList.add("open");
+    }
+
+
+    async function initializeRegistrationPage() {
+      try {
+        await fetchRegistrationsFromBackend();
+        render();
+        refreshRegBadge();
+      } catch (error) {
+        console.error("Registration page loading error:", error);
+        showToast("error", "Loading Failed", "Could not load student registrations.");
+      }
+    }
+
+    initializeRegistrationPage();
+
+  </script>
+</body>
+
+</html>

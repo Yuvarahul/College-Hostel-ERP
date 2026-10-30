@@ -1,0 +1,5 @@
+role_id,name,description,status
+ROLE-ADMIN,Admin,Full system management,Active
+ROLE-WARDEN,Warden,Hostel and student management,Active
+ROLE-SECURITY,Security Staff,Gate QR scanning and gate logs,Active
+ROLE-SUPERVISOR,Supervisor,Supervisory hostel operations,Active

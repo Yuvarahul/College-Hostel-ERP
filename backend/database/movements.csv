@@ -1,0 +1,3 @@
+movement_id,student_id,roll_no,name,room_no,request_id,request_type,token_no,status,expected_return,out_date,out_time,in_time,gatekeeper_out_id,gatekeeper_out_name,gatekeeper_in_id,gatekeeper_in_name,created_at,updated_at
+4,26AI022,26AI022,Priya,A104,8,leave,LEV-260916-148,OUT,2026-09-18,2026-09-16,15:06,,GK101,Murugan,,,2026-09-16T15:06:05.855Z,2026-09-16T15:06:05.855Z
+1,AMJ043,AMJ043,Adhik,B209,15,outpass,OTP-260815-332,IN,12:00,2026-08-15,23:38,23:53,SEC103,Imran Ali,SEC103,Imran Ali,2026-08-15T18:08:33.512Z,2026-08-15T18:23:00.338Z

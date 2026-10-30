@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Room Management | HostelERP Admin Portal</title>
+<link rel="stylesheet" href="warden_dashboard.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  .room-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:14px; }
+  .room-tile { background:var(--white); border-radius:var(--radius-md); box-shadow:var(--shadow-sm); padding:16px; text-align:center; cursor:pointer; transition:var(--transition); border:1px solid rgba(11,61,145,0.06); }
+  .room-tile:hover { box-shadow:var(--shadow-md); transform:translateY(-2px); }
+  .room-tile h4 { font-size:15px; font-weight:700; margin-bottom:6px; }
+  .room-tile p { font-size:11px; color:var(--text-muted); }
+  .rt-available { border-left:4px solid var(--success); }
+  .rt-partial { border-left:4px solid var(--warning); }
+  .rt-full { border-left:4px solid var(--danger); }
+  .rt-maintenance { border-left:4px solid #1D4ED8; }
+  .block-tabs { display:flex; gap:8px; margin-bottom:18px; }
+  .block-tab { padding:9px 18px; border-radius:30px; font-size:12.5px; font-weight:600; background:var(--white); box-shadow:var(--shadow-sm); color:var(--text-muted); }
+  .block-tab.active { background:var(--royal-blue); color:#fff; }
+</style>
+</head>
+<body>
+
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+
+    <div class="main-content">
+      <div id="topbar-root"></div>
+
+      <main class="page">
+        <div class="breadcrumb"><a href="admin-dashboard.html">Dashboard</a> <i class="fa-solid fa-chevron-right"></i> Room Management</div>
+        <div class="page-header">
+          <h2>Room Management</h2>
+          <p>Read-only overview of every room's occupancy and status. Allocation, transfers and vacating are handled by the Warden.</p>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-door-open"></i></div><div class="stat-info"><h3 id="statAvailable">0</h3><p>Available Rooms</p></div></div>
+          <div class="stat-card"><div class="stat-icon amber"><i class="fa-solid fa-door-closed"></i></div><div class="stat-info"><h3 id="statPartial">0</h3><p>Partially Filled</p></div></div>
+          <div class="stat-card"><div class="stat-icon red"><i class="fa-solid fa-lock"></i></div><div class="stat-info"><h3 id="statFull">0</h3><p>Full Rooms</p></div></div>
+          <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-screwdriver-wrench"></i></div><div class="stat-info"><h3 id="statMaintenance">0</h3><p>Maintenance Rooms</p></div></div>
+        </div>
+
+        <div class="block-tabs" id="blockTabs"></div>
+        <div class="room-grid" id="roomGrid"></div>
+
+        <div class="card panel" style="margin-top:26px;">
+          <div class="panel-title"><span>Recent Room Activity</span></div>
+          <div id="roomActivityList"></div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+<script src="students.js"></script>
+<script src="registrations.js"></script>
+<script src="rooms.js"></script>
+<script src="js/script.js"></script>
+<script src="warden_dashboard.js"></script>
+<script src="admin-shell.js"></script>
+<script src="admin-data.js"></script>
+<script>
+  if (initAdminShell("rooms", { showSearch: false })) {
+    let activeBlock = "A";
+    const TILE_CLASS = { "Available": "rt-available", "Partially Filled": "rt-partial", "Full": "rt-full", "Maintenance": "rt-maintenance" };
+
+    function renderStats() {
+      const rs = getRoomStats();
+      document.getElementById("statAvailable").textContent = rs.availableRooms;
+      document.getElementById("statPartial").textContent = rs.partiallyFilledRooms;
+      document.getElementById("statFull").textContent = rs.fullRooms;
+      document.getElementById("statMaintenance").textContent = rs.maintenanceRooms;
+    }
+
+    function renderBlockTabs() {
+      document.getElementById("blockTabs").innerHTML = HOSTEL_BLOCKS.map(b =>
+        `<button class="block-tab ${b === activeBlock ? "active" : ""}" data-block="${b}">Block ${b}</button>`).join("");
+      document.querySelectorAll(".block-tab").forEach(tab => {
+        tab.addEventListener("click", () => { activeBlock = tab.dataset.block; renderBlockTabs(); renderRooms(); });
+      });
+    }
+
+    function renderRooms() {
+      const rooms = getAllRoomsInfo().filter(r => r.block === activeBlock);
+      document.getElementById("roomGrid").innerHTML = rooms.map(r => `
+        <div class="room-tile ${TILE_CLASS[r.status]}" onclick="viewRoom('${r.id}')">
+          <h4>${r.id}</h4>
+          <p>${r.occupied}/${r.capacity} occupied</p>
+          <p>${r.status}</p>
+        </div>`).join("");
+    }
+
+    function viewRoom(roomId) {
+      const r = getRoomInfo(roomId);
+      openDetailsModal({
+        title: `Room ${r.id}`,
+        bodyHtml: `
+          <p><strong>Block:</strong> ${r.block} &nbsp; <strong>Floor:</strong> ${r.floor}</p>
+          <p><strong>Status:</strong> ${r.status}</p>
+          <p><strong>Occupied:</strong> ${r.occupied} / ${r.capacity}</p>
+          ${r.occupants.length === 0 ? "<p>No residents currently.</p>" :
+            r.occupants.map(o => `<p>Bed ${o.bed}: ${o.name} (${o.roll || o.admissionNo})</p>`).join("")}
+        `
+      });
+    }
+
+    function renderActivity() {
+      const history = (typeof getRoomHistory === "function" ? getRoomHistory() : []).slice(0, 8);
+      const list = document.getElementById("roomActivityList");
+      list.innerHTML = history.length === 0
+        ? `<div class="empty-state"><i class="fa-solid fa-clock-rotate-left"></i><h4>No room activity yet</h4></div>`
+        : history.map(h => `
+          <div class="mini-list-item">
+            <div class="mini-avatar">${initials(h.studentName || "—")}</div>
+            <div class="mini-info">
+              <h4>${h.type} <span style="color:var(--text-muted); font-weight:400;">· ${h.studentName || ""}</span></h4>
+              <p>${h.oldRoom ? `${h.oldRoom} → ` : ""}${h.newRoom || "—"} · ${h.performedBy} · ${new Date(h.date).toLocaleString("en-IN")}</p>
+            </div>
+          </div>`).join("");
+    }
+
+    renderStats();
+    renderBlockTabs();
+    renderRooms();
+    renderActivity();
+  }
+</script>
+</body>
+</html>

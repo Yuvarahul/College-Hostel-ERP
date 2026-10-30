@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Warden Activities | HostelERP Admin Portal</title>
+<link rel="stylesheet" href="warden_dashboard.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  .wa-table { width:100%; border-collapse:collapse; background:var(--white); border-radius:var(--radius-md); overflow:hidden; box-shadow:var(--shadow-sm); }
+  .wa-table th, .wa-table td { padding:14px 16px; text-align:left; font-size:12.5px; border-bottom:1px solid rgba(11,61,145,0.06); }
+  .wa-table th { color:var(--text-muted); text-transform:uppercase; font-size:11px; letter-spacing:0.4px; }
+  .wa-table tr:last-child td { border-bottom:none; }
+</style>
+</head>
+<body>
+
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+
+    <div class="main-content">
+      <div id="topbar-root"></div>
+
+      <main class="page">
+        <div class="breadcrumb"><a href="admin-dashboard.html">Dashboard</a> <i class="fa-solid fa-chevron-right"></i> Warden Activities</div>
+        <div class="page-header">
+          <h2>Warden Activities</h2>
+          <p>Every action performed by a Warden — registrations, leave/outpass decisions, and room changes.</p>
+        </div>
+
+        <div class="filter-bar">
+          <div class="search-box" style="background:var(--grey-bg);">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="searchInput" placeholder="Search by student name, roll number or action...">
+          </div>
+          <span class="result-count" id="resultCount">0 activities</span>
+        </div>
+
+        <table class="wa-table">
+          <thead>
+            <tr>
+              <th>Date</th><th>Time</th><th>Warden</th><th>Student</th><th>Roll No.</th><th>Action</th><th>Status</th><th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody id="activityTableBody"></tbody>
+        </table>
+        <div id="activityEmptyState"></div>
+      </main>
+    </div>
+  </div>
+
+<script src="students.js"></script>
+<script src="registrations.js"></script>
+<script src="rooms.js"></script>
+<script src="js/script.js"></script>
+<script src="warden_dashboard.js"></script>
+<script src="admin-shell.js"></script>
+<script src="admin-data.js"></script>
+<script>
+  if (initAdminShell("activities")) {
+    let query = "";
+
+    function getFiltered() {
+      const q = query.trim().toLowerCase();
+      const feed = getWardenActivityFeed();
+      if (!q) return feed;
+      return feed.filter(a =>
+        (a.studentName || "").toLowerCase().includes(q) ||
+        (a.roll || "").toLowerCase().includes(q) ||
+        (a.action || "").toLowerCase().includes(q)
+      );
+    }
+
+    function render() {
+      const list = getFiltered();
+      document.getElementById("resultCount").textContent = `${list.length} activit${list.length === 1 ? "y" : "ies"}`;
+      const body = document.getElementById("activityTableBody");
+      const empty = document.getElementById("activityEmptyState");
+
+      if (list.length === 0) {
+        body.innerHTML = "";
+        empty.innerHTML = `<div class="empty-state"><i class="fa-solid fa-clock-rotate-left"></i><h4>No warden activity yet</h4><p>Actions will appear here as the Warden approves, rejects, or manages rooms.</p></div>`;
+        return;
+      }
+      empty.innerHTML = "";
+
+      body.innerHTML = list.map(a => `
+        <tr>
+          <td>${a.date || "—"}</td>
+          <td>${a.time || "—"}</td>
+          <td>${a.wardenName || "—"}</td>
+          <td>${a.studentName || "—"}</td>
+          <td>${a.roll || "—"}</td>
+          <td>${a.action || "—"}</td>
+          <td>${a.status ? statusBadge(a.status) : "—"}</td>
+          <td>${a.remarks || "—"}</td>
+        </tr>`).join("");
+    }
+
+    document.getElementById("searchInput").addEventListener("input", (e) => { query = e.target.value; render(); });
+    render();
+  }
+</script>
+</body>
+</html>

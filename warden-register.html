@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Warden Registration | Hostel Management ERP</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="bg-texture"></div>
+
+<div class="standalone-card">
+  <div class="auth-card wide">
+    <div class="top-emblem">
+      <div class="logo-slot"><img src="images/logo.png" alt="College Logo" class="college-logo">
+      </div>
+      <div>
+        <div class="college-name">Agurchand Manmull Jain College</div>
+        <div class="college-sub">Hostel Management ERP</div>
+      </div>
+    </div>
+
+    <h1>Warden Registration</h1>
+    <p class="auth-sub">Create your staff account to manage hostel operations.</p>
+
+    <div class="alert" id="registerAlert"></div>
+
+    <form id="wardenRegisterForm" novalidate>
+      <div class="field two-col">
+        <div class="field">
+          <label for="regEmployeeId">Employee ID</label>
+          <input type="text" id="regEmployeeId" name="employeeId" placeholder="e.g. WRD1001" required>
+        </div>
+        <div class="field">
+          <label for="regName">Name</label>
+          <input type="text" id="regName" name="name" placeholder="Full name" required>
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:16px;">
+        <label for="regDept">Department</label>
+        <select id="regDept" name="department" required>
+          <option value="" disabled selected>Select department / block</option>
+          <option>Boys Hostel Block A</option>
+          <option>Boys Hostel Block B</option>
+          <option>Girls Hostel Block A</option>
+          <option>Girls Hostel Block B</option>
+          <option>Administration</option>
+        </select>
+      </div>
+      <div class="field" style="margin-top:16px;">
+  <label for="regShift">Shift</label>
+
+  <select id="regShift" name="shift" required>
+    <option value="" disabled selected>Select Shift</option>
+    <option>Shift 1</option>
+    <option>Shift 2</option>
+  </select>
+</div>
+
+      <div class="field two-col">
+        <div class="field">
+          <label for="regEmail">Email</label>
+          <input type="email" id="regEmail" name="email" placeholder="you@example.com" required>
+        </div>
+        <div class="field">
+          <label for="regPhone">Phone</label>
+          <input type="tel" id="regPhone" name="phone" placeholder="10-digit mobile number" pattern="[0-9]{10}" required>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="regAddress">Address</label>
+        <textarea id="regAddress" name="address" placeholder="Residential address" required></textarea>
+      </div>
+
+      <div class="field two-col">
+        <div class="field has-icon">
+          <label for="regPassword">Password</label>
+          <div class="input-wrap">
+            <input type="password" id="regPassword" name="password" placeholder="Create password" autocomplete="new-password" required>
+            <button type="button" class="toggle-pass" data-target="regPassword" aria-label="Show password">👁️</button>
+          </div>
+        </div>
+        <div class="field has-icon">
+          <label for="regConfirmPassword">Confirm Password</label>
+          <div class="input-wrap">
+            <input type="password" id="regConfirmPassword" placeholder="Re-enter password" autocomplete="new-password" required>
+            <button type="button" class="toggle-pass" data-target="regConfirmPassword" aria-label="Show password">👁️</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:16px;">
+        <label for="regIdProof">ID Proof</label>
+        <input type="file" id="regIdProof" name="idProof" accept=".jpg,.jpeg,.png,.pdf" required>
+        <span class="field-hint">JPG, PNG, or PDF — max size 2 MB</span>
+      </div>
+
+      <button type="submit" class="btn-primary" style="margin-top:20px;">Register</button>
+    </form>
+
+    <div class="form-footnote">
+      Already have an account? <a href="warden-login.html">Login</a>
+    </div>
+    <a href="index.html" class="back-home">← Back to Home</a>
+  </div>
+</div>
+
+<script src="js/script.js"></script>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registration Requests | HostelERP Admin Portal</title>
+<link rel="stylesheet" href="warden_dashboard.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  .reg-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px,1fr)); gap:18px; }
+  .reg-card { background:var(--white); border-radius:var(--radius-md); box-shadow:var(--shadow-sm); padding:20px; border:1px solid rgba(11,61,145,0.06); }
+  .reg-card .rc-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .reg-card .rc-head h4 { font-size:14px; font-weight:600; }
+  .reg-card .rc-head p { font-size:11px; color:var(--text-muted); }
+  .rc-row { display:flex; justify-content:space-between; font-size:12px; padding:6px 0; border-bottom:1px dashed rgba(11,61,145,0.08); }
+  .rc-row span:first-child { color:var(--text-muted); }
+  .rc-row span:last-child { font-weight:600; text-align:right; }
+</style>
+</head>
+<body>
+
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+
+    <div class="main-content">
+      <div id="topbar-root"></div>
+
+      <main class="page">
+        <div class="breadcrumb"><a href="admin-dashboard.html">Dashboard</a> <i class="fa-solid fa-chevron-right"></i> Registration Requests</div>
+        <div class="page-header">
+          <h2>Registration Requests</h2>
+          <p>Read-only view — approvals and rejections are handled by the Warden.</p>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-user-group"></i></div><div class="stat-info"><h3 id="statTotal">0</h3><p>Total Registrations</p></div></div>
+          <div class="stat-card"><div class="stat-icon amber"><i class="fa-solid fa-hourglass-half"></i></div><div class="stat-info"><h3 id="statPending">0</h3><p>Pending</p></div></div>
+          <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-circle-check"></i></div><div class="stat-info"><h3 id="statApproved">0</h3><p>Approved</p></div></div>
+          <div class="stat-card"><div class="stat-icon red"><i class="fa-solid fa-circle-xmark"></i></div><div class="stat-info"><h3 id="statRejected">0</h3><p>Rejected</p></div></div>
+        </div>
+
+        <div class="filter-bar">
+          <div class="search-box" style="background:var(--grey-bg);">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="searchInput" placeholder="Search by name, roll or admission number...">
+          </div>
+          <select id="statusFilter">
+            <option value="">All Statuses</option>
+            <option value="Pending">Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+          <span class="result-count" id="resultCount">0 registrations</span>
+        </div>
+
+        <div class="reg-grid" id="regGrid"></div>
+      </main>
+    </div>
+  </div>
+
+<script src="students.js"></script>
+<script src="registrations.js"></script>
+<script src="rooms.js"></script>
+<script src="js/script.js"></script>
+<script src="warden_dashboard.js"></script>
+<script src="admin-shell.js"></script>
+<script src="admin-data.js"></script>
+<script>
+  if (initAdminShell("registrations")) {
+    let query = "", statusFilter = "";
+
+    function getFiltered() {
+      const q = query.trim().toLowerCase();
+      return getRegistrations().filter(r => {
+        if (statusFilter && r.status !== statusFilter) return false;
+        if (!q) return true;
+        return r.name.toLowerCase().includes(q) || (r.roll || "").toLowerCase().includes(q) || (r.admissionNo || "").toLowerCase().includes(q);
+      });
+    }
+
+    function render() {
+      const all = getRegistrations();
+      document.getElementById("statTotal").textContent = all.length;
+      document.getElementById("statPending").textContent = all.filter(r => r.status === "Pending").length;
+      document.getElementById("statApproved").textContent = all.filter(r => r.status === "Approved").length;
+      document.getElementById("statRejected").textContent = all.filter(r => r.status === "Rejected").length;
+
+      const list = getFiltered();
+      document.getElementById("resultCount").textContent = `${list.length} registration${list.length === 1 ? "" : "s"}`;
+      const grid = document.getElementById("regGrid");
+
+      grid.innerHTML = list.length === 0
+        ? `<div class="empty-state" style="grid-column:1/-1;"><i class="fa-solid fa-inbox"></i><h4>No registrations found</h4></div>`
+        : list.map(r => `
+          <div class="reg-card">
+            <div class="rc-head">
+              <div><h4>${r.name}</h4><p>${r.hostellerType} · ${r.dept}, Year ${r.year}</p></div>
+              ${statusBadge(r.status)}
+            </div>
+            <div class="rc-row"><span>ID</span><span>${r.roll || r.admissionNo}</span></div>
+            <div class="rc-row"><span>Room</span><span>${r.room || "Not allocated"}</span></div>
+            <div class="rc-row"><span>Phone</span><span>${r.phone}</span></div>
+            <div class="rc-row"><span>Submitted</span><span>${new Date(r.registeredAt).toLocaleDateString("en-IN")}</span></div>
+            ${r.status === "Rejected" && r.rejectionReason ? `<div class="rc-row"><span>Reason</span><span>${r.rejectionReason}</span></div>` : ""}
+          </div>`).join("");
+    }
+
+    document.getElementById("searchInput").addEventListener("input", (e) => { query = e.target.value; render(); });
+    document.getElementById("statusFilter").addEventListener("change", (e) => { statusFilter = e.target.value; render(); });
+    render();
+  }
+</script>
+</body>
+</html>

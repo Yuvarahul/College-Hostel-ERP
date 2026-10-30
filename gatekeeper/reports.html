@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reports | GateKeeper</title>
+<link rel="stylesheet" href="gatekeeper-style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="topbar-root"></div>
+
+      <main class="page">
+        <div class="breadcrumb"><a href="dashboard.html">Dashboard</a> <i class="fa-solid fa-chevron-right"></i> Reports</div>
+        <div class="page-header">
+          <h2>Reports</h2>
+          <p>Daily summaries and exportable activity reports.</p>
+        </div>
+
+        <div class="kpi-strip">
+          <div class="kpi-box"><div class="kpi-value" id="kpiEntries">0</div><div class="kpi-label">Student Entries Today</div></div>
+          <div class="kpi-box"><div class="kpi-value" id="kpiExits">0</div><div class="kpi-label">Student Exits Today</div></div>
+          <div class="kpi-box"><div class="kpi-value" id="kpiVisitors">0</div><div class="kpi-label">Visitors Today</div></div>
+          <div class="kpi-box"><div class="kpi-value" id="kpiCurrentlyOut">0</div><div class="kpi-label">Students Currently Out</div></div>
+          <div class="kpi-box"><div class="kpi-value" id="kpiAvgVisit">0m</div><div class="kpi-label">Avg. Visitor Duration Today</div></div>
+        </div>
+
+        <div class="dashboard-grid">
+          <div class="card panel">
+            <div class="panel-title">
+              <span>Students Currently Out of Campus</span>
+              <a href="#" id="exportCurrentlyOutBtn">Export CSV <i class="fa-solid fa-file-csv"></i></a>
+            </div>
+            <div id="currentlyOutList"></div>
+          </div>
+
+          <div class="card panel">
+            <div class="panel-title">
+              <span>Staff Activity Today</span>
+              <a href="#" id="exportStaffBtn">Export CSV <i class="fa-solid fa-file-csv"></i></a>
+            </div>
+            <div id="staffActivityList"></div>
+          </div>
+        </div>
+
+        <div class="card panel">
+          <div class="panel-title">
+            <span>Full Gate Activity — Today</span>
+            <a href="#" id="exportTodayBtn">Export CSV <i class="fa-solid fa-file-csv"></i></a>
+          </div>
+          <div class="table-wrap" style="box-shadow:none;">
+            <table class="data-table">
+              <thead><tr><th>Person</th><th>Type</th><th>Direction</th><th>Gate</th><th>Logged By</th><th>Time</th></tr></thead>
+              <tbody id="todayTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+<script src="gatekeeper-auth-adapter.js"></script>
+<script src="gatekeeper-data.js"></script>
+<script src="gatekeeper.js"></script>
+<script>
+  const session = requireAuth();
+  if (session) {
+    initShell("reports", { showSearch: false });
+
+    function downloadCSV(filename, rows) {
+      const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    const todayLog = getTodayGateLog();
+    const studentToday = todayLog.filter(e => e.personType === "student");
+    document.getElementById("kpiEntries").textContent = studentToday.filter(e => e.direction === "in").length;
+    document.getElementById("kpiExits").textContent = studentToday.filter(e => e.direction === "out").length;
+
+    const visitorsToday = getVisitors().filter(v => new Date(v.entryTime).toDateString() === new Date().toDateString());
+    document.getElementById("kpiVisitors").textContent = visitorsToday.length;
+
+    const closedVisitsToday = visitorsToday.filter(v => v.exitTime);
+    const avgMinutes = closedVisitsToday.length
+      ? Math.round(closedVisitsToday.reduce((sum, v) => sum + (new Date(v.exitTime) - new Date(v.entryTime)), 0) / closedVisitsToday.length / 60000)
+      : 0;
+    document.getElementById("kpiAvgVisit").textContent = `${avgMinutes}m`;
+
+    /* Currently-out students: latest event per roll is "out" */
+    const fullStudentLog = getGateLog().filter(e => e.personType === "student");
+    const latestByStudent = {};
+    fullStudentLog.slice().reverse().forEach(e => { latestByStudent[e.personRefId] = e; });
+    const currentlyOut = Object.values(latestByStudent).filter(e => e.direction === "out");
+    document.getElementById("kpiCurrentlyOut").textContent = currentlyOut.length;
+
+    const outList = document.getElementById("currentlyOutList");
+    outList.innerHTML = currentlyOut.length === 0
+      ? `<div class="empty-state"><i class="fa-solid fa-house-circle-check"></i><h4>Everyone is in</h4><p>No students are currently marked out.</p></div>`
+      : currentlyOut.slice(0, 10).map(e => `
+        <div class="mini-list-item">
+          <div class="mini-avatar">${initials(e.name || "??")}</div>
+          <div class="mini-info"><h4>${e.name}</h4><p>${e.identifier} · out since ${fmtDateTime(e.timestamp)}</p></div>
+        </div>`).join("");
+
+    document.getElementById("exportCurrentlyOutBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      downloadCSV("students-currently-out.csv", [["Name", "Roll No", "Out Since", "Gate"], ...currentlyOut.map(x => [x.name, x.identifier, x.timestamp, x.gateId])]);
+    });
+
+    /* Staff activity today */
+    const staffCounts = {};
+    todayLog.forEach(e => {
+      const key = e.loggedByName || "System";
+      if (!staffCounts[key]) staffCounts[key] = { in: 0, out: 0 };
+      staffCounts[key][e.direction]++;
+    });
+    const staffList = document.getElementById("staffActivityList");
+    const staffEntries = Object.entries(staffCounts);
+    staffList.innerHTML = staffEntries.length === 0
+      ? `<div class="empty-state"><i class="fa-solid fa-user-shield"></i><h4>No activity yet today</h4><p>Staff logins and gate actions will show up here.</p></div>`
+      : staffEntries.map(([name, counts]) => `
+        <div class="mini-list-item">
+          <div class="mini-avatar">${initials(name)}</div>
+          <div class="mini-info"><h4>${name}</h4><p>${counts.in} entries logged · ${counts.out} exits logged</p></div>
+        </div>`).join("");
+
+    document.getElementById("exportStaffBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      downloadCSV("staff-activity-today.csv", [["Staff Name", "Entries Logged", "Exits Logged"], ...staffEntries.map(([name, c]) => [name, c.in, c.out])]);
+    });
+
+    /* Full today table */
+    const tbody = document.getElementById("todayTableBody");
+    tbody.innerHTML = todayLog.length === 0
+      ? `<tr><td colspan="6"><div class="empty-state"><i class="fa-solid fa-calendar-day"></i><h4>No gate activity today yet</h4></div></td></tr>`
+      : todayLog.map(e => `
+        <tr>
+          <td class="person-cell"><div class="mini-avatar">${initials(e.name || "??")}</div><div class="p-name">${e.name}</div></td>
+          <td style="text-transform:capitalize;">${e.personType}</td>
+          <td>${directionBadge(e.direction)}</td>
+          <td>${e.gateId}</td>
+          <td>${e.loggedByName}</td>
+          <td>${fmtTime(e.timestamp)}</td>
+        </tr>`).join("");
+
+    document.getElementById("exportTodayBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      downloadCSV(`gate-activity-${new Date().toISOString().slice(0, 10)}.csv`,
+        [["Name", "Identifier", "Type", "Direction", "Gate", "Logged By", "Timestamp"],
+         ...todayLog.map(x => [x.name, x.identifier, x.personType, x.direction, x.gateId, x.loggedByName, x.timestamp])]);
+    });
+  }
+</script>
+</body>
+</html>

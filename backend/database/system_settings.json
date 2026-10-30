@@ -1,0 +1,6 @@
+{
+  "maintenanceMode": false,
+  "allowStudentRegistration": true,
+  "allowWardenRegistration": true,
+  "requireApproval": true
+}

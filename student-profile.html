@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Profile | HostelERP Warden Portal</title>
+  <link rel="stylesheet" href="warden_dashboard.css">
+  <link rel="stylesheet" href="students.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+
+<body>
+
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+
+    <div class="main-content">
+      <div id="topbar-root"></div>
+
+      <main class="page" id="pageContent">
+        <div class="breadcrumb"><a href="warden_dashboard.html">Dashboard</a> <i class="fa-solid fa-chevron-right"></i>
+          <a href="students.html">Total Students</a> <i class="fa-solid fa-chevron-right"></i> Profile
+        </div>
+
+        <button class="btn btn-ghost" style="margin-bottom:18px;"
+          onclick="history.length > 1 ? history.back() : location.href='students.html'">
+          <i class="fa-solid fa-arrow-left"></i> Back
+        </button>
+
+        <div id="profileWrap">
+          <div class="card panel">
+            <div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i>
+              <h4>Loading profile...</h4>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="students.js"></script>
+  <script src="registrations.js"></script>
+  <script src="warden_dashboard.js"></script>
+  <script>
+    initShell("students", { showSearch: false });
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const rollParam = (urlParams.get("roll") || "").trim();
+    const admissionNoParam = (urlParams.get("admissionNo") || "").trim();
+    const wrap = document.getElementById("profileWrap");
+
+    function findStudent(students) {
+      /* Try roll first, then admissionNo — both may be provided */
+      if (rollParam) {
+        const s = students.find(s => s.roll === rollParam);
+        if (s) return s;
+      }
+      if (admissionNoParam) {
+        const s = students.find(s => s.admissionNo === admissionNoParam);
+        if (s) return s;
+      }
+      /* Fallback: case-insensitive match */
+      const qRoll = rollParam.toLowerCase();
+      const qAdm = admissionNoParam.toLowerCase();
+      return students.find(s =>
+        (qRoll && s.roll.toLowerCase() === qRoll) ||
+        (qAdm && (s.admissionNo || "").toLowerCase() === qAdm)
+      ) || null;
+    }
+
+    function renderProfile(student) {
+      const hostelColor = { "In Hostel": "badge-approved", "On Outpass": "badge-pending", "On Leave": "badge-hostel", "Waiting For Allocation": "badge-pending" };
+
+      wrap.innerHTML = `
+      <div class="dashboard-grid" style="grid-template-columns: 320px 1fr; align-items:start;">
+        <div class="card glass-panel panel" style="text-align:center;">
+          <div class="warden-avatar" style="width:88px; height:88px; font-size:28px; margin:0 auto 14px; overflow:hidden; border-radius:50%; display:flex; align-items:center; justify-content:center; background:var(--royal-blue); color:white;">
+            ${student.passportPhoto ? `<img src="${STU_API_BASE}/uploads/students/${student.passportPhoto}" alt="${student.name}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.textContent='${initials(student.name)}'">` : initials(student.name)}
+          </div>
+          <h3 style="font-size:17px;">${student.name}</h3>
+          <p style="color:var(--text-muted); font-size:12px; margin-bottom:12px;">${student.roll || student.admissionNo} · ${student.dept}</p>
+          <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:16px;">
+            ${statusBadge(student.status)}
+            <span class="badge ${hostelColor[student.hostelStatus] || 'badge-pending'}"><i></i>${student.hostelStatus || 'In Hostel'}</span>
+          </div>
+          <p style="font-size:11.5px; color:var(--text-muted);"><i class="fa-solid fa-circle-check" style="color:var(--success, #16a34a);"></i> Registration approved — student can log in.</p>
+        </div>
+
+        <div class="card panel">
+          <div class="panel-title"><span>Student Details</span></div>
+          <div class="detail-grid">
+            <div class="d-item"><span><i class="fa-solid fa-graduation-cap"></i> Year</span><p>${student.year || '—'}</p></div>
+            <div class="d-item"><span><i class="fa-solid fa-door-closed"></i> Room Number</span><p>${student.room ? `${student.room} (Block ${student.block || student.room[0]})` : 'Not Allocated'}</p></div>
+            <div class="d-item"><span><i class="fa-solid fa-mobile-screen"></i> Student Contact</span><p>${student.phone || '—'}</p></div>
+            <div class="d-item"><span><i class="fa-solid fa-phone"></i> Parent Contact</span><p>${student.parentPhone || '—'}</p></div>
+            <div class="d-item"><span><i class="fa-solid fa-envelope"></i> Email</span><p>${student.email || '—'}</p></div>
+            <div class="d-item" style="grid-column: 1 / -1;"><span><i class="fa-solid fa-location-dot"></i> Address</span><p>${student.address || '—'}</p></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard-grid" style="margin-top:22px;">
+        <div class="card panel">
+          <div class="panel-title"><span>Previous Outpasses</span></div>
+          <div id="prevOutpassList"></div>
+        </div>
+        <div class="card panel">
+          <div class="panel-title"><span>Previous Leave History</span></div>
+          <div id="prevLeaveList"></div>
+        </div>
+      </div>
+    `;
+
+      const opList = document.getElementById("prevOutpassList");
+      const lvList = document.getElementById("prevLeaveList");
+
+      opList.innerHTML = (student.previousOutpasses && student.previousOutpasses.length)
+        ? student.previousOutpasses.map(o => `
+          <div class="mini-list-item">
+            <div class="mini-avatar stat-icon blue" style="width:38px;height:38px;font-size:13px;"><i class="fa-solid fa-door-open"></i></div>
+            <div class="mini-info">
+              <h4>${o.destination}</h4>
+              <p>${o.reason} · ${fmtDate(new Date(o.fromTime))}</p>
+            </div>
+            ${statusBadge(o.status)}
+          </div>`).join("")
+        : `<div class="empty-state"><i class="fa-solid fa-door-closed"></i><h4>No outpass history</h4><p>This student hasn't requested an outpass yet.</p></div>`;
+
+      lvList.innerHTML = (student.previousLeaves && student.previousLeaves.length)
+        ? student.previousLeaves.map(l => `
+          <div class="mini-list-item">
+            <div class="mini-avatar stat-icon amber" style="width:38px;height:38px;font-size:13px;"><i class="fa-solid fa-calendar-days"></i></div>
+            <div class="mini-info">
+              <h4>${l.reason}</h4>
+              <p>${fmtDate(new Date(l.fromDate))} → ${fmtDate(new Date(l.toDate))}</p>
+            </div>
+            ${statusBadge(l.status)}
+          </div>`).join("")
+        : `<div class="empty-state"><i class="fa-solid fa-calendar-xmark"></i><h4>No leave history</h4><p>This student hasn't taken leave yet.</p></div>`;
+    }
+
+    /* Always fetch fresh from backend before looking up — fixes the "Student Not Found" bug
+       caused by trying to read getStudents() before the async fetch completes */
+    fetchStudentsFromBackend().then(students => {
+      const student = findStudent(students);
+      if (!student) {
+        wrap.innerHTML = `<div class="card panel"><div class="empty-state"><i class="fa-solid fa-user-slash"></i><h4>Student not found</h4><p>The roll/admission number in the URL doesn't match any approved student record.</p></div></div>`;
+      } else {
+        renderProfile(student);
+      }
+    }).catch(() => {
+      wrap.innerHTML = `<div class="card panel"><div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i><h4>Error loading profile</h4><p>Could not connect to the backend. Please make sure the server is running.</p></div></div>`;
+    });
+  </script>
+</body>
+
+</html>

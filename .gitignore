@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+backend/node_modules/
+
+# Secrets — real email and admin credentials live here.
+# Never commit this file. Copy backend/.env.example to
+# backend/.env and fill in your own values instead.
+backend/.env
+.env
+
+# Uploaded files at runtime
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/

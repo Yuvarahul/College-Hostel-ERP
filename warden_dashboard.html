@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | HostelERP Warden Portal</title>
+  <link rel="stylesheet" href="warden_dashboard.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+
+<body>
+
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+
+    <div class="main-content">
+      <div id="topbar-root"></div>
+
+      <main class="page">
+        <div class="greeting-banner">
+          <div>
+            <h2 id="greetingText">Good Morning, Warden</h2>
+            <p>Here's what's happening across the hostel today.</p>
+          </div>
+          <i class="fa-solid fa-building-user greet-icon"></i>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-card" onclick="location.href='students.html'">
+            <div class="stat-icon blue"><i class="fa-solid fa-users"></i></div>
+            <div class="stat-info">
+              <h3 id="statTotal">0</h3>
+              <p>Total Students</p>
+            </div>
+            <i class="fa-solid fa-arrow-up-right-from-square stat-arrow"></i>
+          </div>
+
+          <div class="stat-card" onclick="location.href='pending-requests.html'">
+            <div class="stat-icon amber"><i class="fa-solid fa-hourglass-half"></i></div>
+            <div class="stat-info">
+              <h3 id="statPending">0</h3>
+              <p>Pending Requests</p>
+            </div>
+            <i class="fa-solid fa-arrow-up-right-from-square stat-arrow"></i>
+          </div>
+
+          <div class="stat-card" onclick="location.href='notifications.html'">
+            <div class="stat-icon red"><i class="fa-solid fa-bell"></i></div>
+            <div class="stat-info">
+              <h3 id="statNotif">0</h3>
+              <p>Notifications</p>
+            </div>
+            <i class="fa-solid fa-arrow-up-right-from-square stat-arrow"></i>
+          </div>
+        </div>
+
+        <div class="dashboard-grid" style="grid-template-columns: 1fr;">
+          <div class="card panel">
+            <div class="panel-title"><span>Quick Actions</span></div>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <a href="outpass-requests.html" class="btn btn-outline" style="justify-content:flex-start;"><i
+                  class="fa-solid fa-door-open"></i> Review Outpasses</a>
+              <a href="leave-requests.html" class="btn btn-outline" style="justify-content:flex-start;"><i
+                  class="fa-solid fa-calendar-days"></i> Review Leaves</a>
+              <a href="registration-requests.html" class="btn btn-outline" style="justify-content:flex-start;"><i
+                  class="fa-solid fa-user-plus"></i> Review Registrations</a>
+              <a href="room-allocation.html" class="btn btn-outline" style="justify-content:flex-start;"><i
+                  class="fa-solid fa-key"></i> Room Allocation</a>
+              <a href="profile.html" class="btn btn-outline" style="justify-content:flex-start;"><i
+                  class="fa-solid fa-id-badge"></i> My Profile</a>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="students.js"></script>
+  <script src="registrations.js"></script>
+  <script src="warden_dashboard.js"></script>
+  <script>
+    initShell("dashboard", { showSearch: false });
+
+    async function renderDashboard() {
+      if (typeof getGreeting === "function" && typeof WARDEN !== "undefined" && WARDEN.name) {
+        document.getElementById("greetingText").textContent = `${getGreeting()}, ${WARDEN.name.split(" ")[0]}`;
+      }
+
+      const apiBase = (window.location.port === "3000") ? "" : "http://localhost:3000";
+
+      try {
+        const res = await fetch(`${apiBase}/api/wardens/dashboard-stats`);
+        const data = await res.json();
+
+        if (data.success && data.stats) {
+          document.getElementById("statTotal").textContent = data.stats.totalStudents ?? 0;
+          document.getElementById("statPending").textContent = data.stats.pendingRequests ?? 0;
+          document.getElementById("statNotif").textContent = data.stats.unreadNotifications ?? 0;
+          return;
+        }
+      } catch (e) {
+        console.warn("Could not load stats from dashboard-stats API, trying fallback:", e);
+      }
+
+      // Fallback in case endpoint is unreachable
+      try {
+        const [students, registrations, notifications, leavesRes, outpassesRes] = await Promise.all([
+          fetchStudentsFromBackend(),
+          fetchRegistrationsFromBackend(),
+          fetchNotificationsFromBackend(),
+          fetch(`${apiBase}/api/leave`).then(r => r.json()).catch(() => ({ leaves: [] })),
+          fetch(`${apiBase}/api/outpass`).then(r => r.json()).catch(() => ({ outpasses: [] }))
+        ]);
+
+        const leaves = leavesRes.leaves || [];
+        const outpasses = outpassesRes.outpasses || [];
+
+        document.getElementById("statTotal").textContent = (students || []).filter(s => String(s.status).toLowerCase() === "approved").length;
+
+        const pendingRegs = (registrations || []).filter(r => String(r.status).toLowerCase() === "pending").length;
+        const pendingLeaves = leaves.filter(l => String(l.status).toLowerCase() === "pending").length;
+        const pendingOutpasses = outpasses.filter(o => String(o.status).toLowerCase() === "pending").length;
+        document.getElementById("statPending").textContent = pendingRegs + pendingLeaves + pendingOutpasses;
+
+        document.getElementById("statNotif").textContent = (notifications || []).filter(n => !n.read).length;
+      } catch (err) {
+        console.error("Dashboard fallback render error:", err);
+      }
+    }
+
+    renderDashboard();
+  </script>
+</body>
+
+</html>

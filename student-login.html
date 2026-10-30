@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Login | Hostel Management ERP</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+  <div class="bg-texture"></div>
+
+  <div class="auth-wrapper">
+
+    <aside class="auth-panel">
+      <div class="auth-panel-top">
+        <div class="logo-slot">
+          <img src="images/logo.png" alt="College Logo">
+        </div>
+
+        <div>
+          <div class="college-name">Agurchand Manmull Jain College</div>
+          <div class="college-sub">Hostel Management </div>
+        </div>
+      </div>
+
+      <div class="id-card">
+        <div class="id-card-chip"></div>
+        <div class="id-card-role">🎓 Student Access</div>
+        <div class="id-card-line"></div>
+        <div class="id-card-line short"></div>
+      </div>
+
+      <div class="auth-panel-quote">
+        <strong>One portal, every hostel service.</strong>
+        Check your room allocation, mess schedule, leave status, and gate-pass history — all in one place.
+      </div>
+    </aside>
+
+    <section class="auth-form-side">
+      <div class="auth-card">
+        <h1>Student Login</h1>
+        <p class="auth-sub">Enter your admission number and password to continue.</p>
+
+        <div class="alert" id="loginAlert"></div>
+
+        <form id="studentLoginForm" novalidate>
+          <div class="field">
+            <label for="sAdmissionNo">Admission Number</label>
+            <div class="input-wrap">
+              <input type="text" id="sAdmissionNo" name="admissionNo" placeholder="e.g. AMJ2024001"
+                autocomplete="username" required>
+            </div>
+          </div>
+
+          <div class="field has-icon">
+            <label for="sPassword">Password</label>
+            <div class="input-wrap">
+              <input type="password" id="sPassword" name="password" placeholder="Enter your password"
+                autocomplete="current-password" required>
+              <button type="button" class="toggle-pass" data-target="sPassword" aria-label="Show password">👁️</button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary">Login</button>
+        </form>
+
+        <div class="link-row">
+          <a href="forget_password.html?role=student" class="forgot-pass-link">Forgot Password?</a>
+          <a href="student-register.html">Register</a>
+        </div>
+
+        <a href="index.html" class="back-home">← Back to Home</a>
+      </div>
+    </section>
+
+  </div>
+
+  <script src="students.js"></script>
+  <script src="registrations.js"></script>
+  <script src="js/script.js"></script>
+</body>
+
+</html>

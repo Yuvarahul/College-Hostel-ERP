@@ -1,0 +1,57 @@
+/* ============================================================
+   students.css — styling specific to the student directory page
+   ============================================================ */
+
+.table-wrap {
+  background: var(--white);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  overflow-x: auto;
+}
+
+table.student-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 920px;
+}
+
+.student-table thead th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  font-weight: 700;
+  padding: 16px 18px;
+  border-bottom: 1.5px solid rgba(11,61,145,0.08);
+  background: var(--grey-bg);
+  white-space: nowrap;
+}
+body.dark .student-table thead th { background: rgba(255,255,255,0.03); }
+
+.student-table tbody td {
+  padding: 14px 18px;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(11,61,145,0.06);
+  vertical-align: middle;
+}
+.student-table tbody tr {
+  transition: var(--transition);
+  animation: fadeUp 0.3s ease both;
+}
+.student-table tbody tr:hover { background: var(--light-blue); }
+
+.student-cell { display: flex; align-items: center; gap: 12px; }
+.student-cell .mini-avatar { width: 36px; height: 36px; font-size: 12px; }
+.student-cell .s-name { font-weight: 600; font-size: 13px; }
+.student-cell .s-email { font-size: 11px; color: var(--text-muted); }
+
+.action-cell { display: flex; gap: 6px; flex-wrap: wrap; }
+.action-cell .btn { padding: 6px 11px; font-size: 11.5px; }
+.action-cell .icon-only { width: 30px; height: 30px; padding: 0; border-radius: 8px; }
+
+@media (max-width: 600px) {
+  .filter-bar .search-box { width: 100%; }
+  .filter-bar { flex-direction: column; align-items: stretch; }
+  .result-count { margin-left: 0; text-align: right; }
+}

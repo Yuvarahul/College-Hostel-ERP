@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gatekeeper Dashboard | GateKeeper</title>
+<link rel="stylesheet" href="gatekeeper-style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  /* Dashboard limited to the two requested Gatekeeper functions */
+  .gatekeeper-actions {
+    min-height: calc(100vh - 150px);
+    display: grid;
+    grid-template-columns: repeat(2, minmax(280px, 1fr));
+    gap: 28px;
+    align-items: center;
+    justify-content: center;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .gatekeeper-action-card {
+    min-height: 300px;
+    background: var(--white);
+    border: 1px solid rgba(11,61,145,0.08);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 42px 30px;
+    transition: var(--transition);
+    cursor: pointer;
+  }
+
+  .gatekeeper-action-card:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .gatekeeper-action-icon {
+    width: 92px;
+    height: 92px;
+    border-radius: 24px;
+    background: var(--light-blue);
+    color: var(--royal-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 42px;
+    margin-bottom: 24px;
+  }
+
+  .gatekeeper-action-card h2 {
+    font-size: 24px;
+    margin-bottom: 10px;
+    color: var(--text-main);
+  }
+
+  .gatekeeper-action-card p {
+    color: var(--text-muted);
+    font-size: 14px;
+    max-width: 320px;
+    line-height: 1.7;
+    margin-bottom: 24px;
+  }
+
+  .gatekeeper-action-card .btn {
+    min-width: 180px;
+    justify-content: center;
+  }
+
+  @media (max-width: 700px) {
+    .gatekeeper-actions {
+      grid-template-columns: 1fr;
+      min-height: auto;
+      padding: 20px 0 40px;
+    }
+
+    .gatekeeper-action-card {
+      min-height: 250px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+  <div id="sidebar-root"></div>
+
+  <div class="main-content">
+    <div id="topbar-root"></div>
+
+    <main class="page">
+      <div class="greeting-banner">
+        <div>
+          <h2 id="greetingText">Gatekeeper Dashboard</h2>
+          <p>Choose an action to manage student entry and exit.</p>
+        </div>
+        <i class="fa-solid fa-shield-halved greet-icon"></i>
+      </div>
+
+      <div class="gatekeeper-actions">
+
+        <!-- QR Scan -->
+        <div class="gatekeeper-action-card" onclick="window.location.href='qr-scan.html'">
+          <div class="gatekeeper-action-icon">
+            <i class="fa-solid fa-qrcode"></i>
+          </div>
+          <h2>QR Scan</h2>
+          <p>Scan and verify a student's QR pass for gate entry or exit.</p>
+          <a href="qr-scan.html" class="btn btn-primary">
+            <i class="fa-solid fa-camera"></i>
+            Open QR Scanner
+          </a>
+        </div>
+
+        <!-- Gate Log -->
+        <div class="gatekeeper-action-card" onclick="window.location.href='gate-logs.html'">
+          <div class="gatekeeper-action-icon">
+            <i class="fa-solid fa-clipboard-list"></i>
+          </div>
+          <h2>Gate Log</h2>
+          <p>View and manage the recorded student entry and exit activities.</p>
+          <a href="gate-logs.html" class="btn btn-primary">
+            <i class="fa-solid fa-list"></i>
+            View Gate Log
+          </a>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="gatekeeper-auth-adapter.js"></script>
+<script src="gatekeeper-data.js"></script>
+<script src="gatekeeper.js"></script>
+<script>
+  const session = requireAuth();
+
+  if (session) {
+    initShell("dashboard", { showSearch: false });
+
+    const firstName = session.name ? session.name.split(" ")[0] : "Staff";
+    document.getElementById("greetingText").textContent =
+      `${getGreeting()}, ${firstName}`;
+  }
+</script>
+</body>
+</html>

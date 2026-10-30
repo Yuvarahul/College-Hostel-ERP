@@ -1,0 +1,1971 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Outpass Requests | HostelERP Warden Portal</title>
+
+  <link rel="stylesheet" href="warden_dashboard.css">
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <style>
+    .request-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 18px;
+    }
+
+    .request-card {
+      background: var(--white);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      padding: 20px;
+      transition: var(--transition);
+      border: 1px solid rgba(11, 61, 145, 0.06);
+    }
+
+    .request-card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-3px);
+    }
+
+    .request-card .rc-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .request-card .rc-head h4 {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .request-card .rc-head p {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .rc-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      padding: 6px 0;
+      border-bottom: 1px dashed rgba(11, 61, 145, 0.08);
+      gap: 15px;
+    }
+
+    .rc-row span:first-child {
+      color: var(--text-muted);
+    }
+
+    .rc-row span:last-child {
+      font-weight: 600;
+      text-align: right;
+      word-break: break-word;
+    }
+
+    .rc-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .rc-actions .btn {
+      flex: 1;
+      padding: 8px;
+      font-size: 11.5px;
+    }
+
+    .backend-error {
+      grid-column: 1 / -1;
+      padding: 30px;
+      text-align: center;
+      background: #fff1f1;
+      color: #c62828;
+      border-radius: 12px;
+    }
+
+    .proof-link {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .proof-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+
+</head>
+
+<body>
+
+  <div class="app-shell">
+
+    <!-- SIDEBAR -->
+    <div id="sidebar-root"></div>
+
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+
+      <!-- TOPBAR -->
+      <div id="topbar-root"></div>
+
+
+      <main class="page">
+
+        <!-- BREADCRUMB -->
+        <div class="breadcrumb">
+
+          <a href="warden_dashboard.html">
+            Dashboard
+          </a>
+
+          <i class="fa-solid fa-chevron-right"></i>
+
+          <a href="pending-requests.html">
+            Pending Requests
+          </a>
+
+          <i class="fa-solid fa-chevron-right"></i>
+
+          Outpass Requests
+
+        </div>
+
+
+        <!-- HEADER -->
+        <div class="page-header">
+
+          <h2>
+            Outpass Requests
+          </h2>
+
+          <p>
+            Approve or reject student outpass requests.
+          </p>
+
+        </div>
+
+
+        <!-- FILTER BAR -->
+        <div class="filter-bar">
+
+          <select id="statusFilter">
+
+            <option value="">
+              All Statuses
+            </option>
+
+            <option value="Pending" selected>
+              Pending
+            </option>
+
+            <option value="Approved">
+              Approved
+            </option>
+
+            <option value="Rejected">
+              Rejected
+            </option>
+
+          </select>
+
+
+          <span class="result-count" id="resultCount">
+            0 requests
+          </span>
+
+        </div>
+
+
+        <!-- REQUEST CARDS -->
+        <div class="request-grid" id="requestGrid"></div>
+
+
+        <!-- PAGINATION -->
+        <div class="pagination" id="pagination"></div>
+
+      </main>
+
+    </div>
+
+  </div>
+
+
+  <!-- EXISTING PROJECT JS -->
+  <script src="students.js"></script>
+  <script src="registrations.js"></script>
+  <script src="warden_dashboard.js"></script>
+
+
+  <script>
+
+    /* ============================================================
+       BACKEND
+       ============================================================ */
+
+    const API_BASE = (window.location.port === "3000") ? "/api" : "http://localhost:3000/api";
+
+
+    /* ============================================================
+       INITIALIZE WARDEN SHELL
+       ============================================================ */
+
+    initShell("pending", {
+      showSearch: false
+    });
+
+
+    /* ============================================================
+       VARIABLES
+       ============================================================ */
+
+    const PER_PAGE = 9;
+
+    let currentPage = 1;
+
+    let allOutpassRequests = [];
+
+
+    const statusFilter =
+      document.getElementById("statusFilter");
+
+    const requestGrid =
+      document.getElementById("requestGrid");
+
+    const resultCount =
+      document.getElementById("resultCount");
+
+    const pagination =
+      document.getElementById("pagination");
+
+
+    /* ============================================================
+       LOAD OUTPASS REQUESTS
+       ============================================================ */
+
+    async function loadOutpassRequests() {
+
+      try {
+
+        requestGrid.innerHTML = `
+
+          <div
+            style="
+              grid-column:1/-1;
+              text-align:center;
+              padding:50px;
+            "
+          >
+
+            <i class="fa-solid fa-spinner fa-spin"></i>
+
+            <p style="margin-top:10px;">
+              Loading outpass requests...
+            </p>
+
+          </div>
+
+        `;
+
+
+        /*
+         * IMPORTANT:
+         * Read directly from backend.
+         */
+
+        const response =
+          await fetch(
+            `${API_BASE}/outpass`
+          );
+
+
+        if (!response.ok) {
+
+          throw new Error(
+            `Server returned HTTP ${response.status}`
+          );
+
+        }
+
+
+        const data =
+          await response.json();
+
+
+        console.log(
+          "OUTPASS API RESPONSE:",
+          data
+        );
+
+
+        if (!data.success) {
+
+          throw new Error(
+            data.message ||
+            "Unable to load requests."
+          );
+
+        }
+
+
+        allOutpassRequests =
+          Array.isArray(data.outpasses)
+            ? data.outpasses
+            : [];
+
+
+        currentPage = 1;
+
+        render();
+
+
+      } catch (error) {
+
+        console.error(
+          "Failed to load outpass requests:",
+          error
+        );
+
+
+        resultCount.textContent =
+          "0 requests";
+
+
+        requestGrid.innerHTML = `
+
+          <div class="backend-error">
+
+            <i
+              class="fa-solid fa-triangle-exclamation"
+              style="font-size:30px;"
+            ></i>
+
+            <h4 style="margin-top:12px;">
+              Unable to load outpass requests
+            </h4>
+
+            <p style="margin-top:8px;">
+              Make sure the backend server is running on
+              http://localhost:3000
+            </p>
+
+            <p style="margin-top:8px;">
+              Error:
+              ${escapeHtml(error.message)}
+            </p>
+
+            <button
+              class="btn btn-primary"
+              style="margin-top:15px;"
+              onclick="loadOutpassRequests()"
+            >
+
+              <i class="fa-solid fa-rotate"></i>
+
+              Retry
+
+            </button>
+
+          </div>
+
+        `;
+
+
+        pagination.innerHTML = "";
+
+      }
+
+    }
+
+
+    /* ============================================================
+       FILTER
+       ============================================================ */
+
+    function getFiltered() {
+
+      const selectedStatus =
+        statusFilter.value;
+
+
+      return allOutpassRequests.filter(
+        request => {
+
+          const status =
+            String(
+              request.status || ""
+            );
+
+
+          const matchesStatus =
+            !selectedStatus ||
+            status.toLowerCase() ===
+            selectedStatus.toLowerCase();
+
+
+          return matchesStatus;
+
+        }
+      );
+
+    }
+
+
+    /* ============================================================
+       HTML ESCAPE
+       ============================================================ */
+
+    function escapeHtml(value) {
+
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+
+    }
+
+
+    /* ============================================================
+       DATE FORMAT
+       ============================================================ */
+
+    function formatDateTime(dateValue) {
+
+      if (!dateValue) {
+        return "—";
+      }
+
+
+      const date =
+        new Date(dateValue);
+
+
+      if (
+        Number.isNaN(
+          date.getTime()
+        )
+      ) {
+
+        return escapeHtml(
+          dateValue
+        );
+
+      }
+
+
+      return date.toLocaleString(
+        "en-IN",
+        {
+          dateStyle: "medium",
+          timeStyle: "short"
+        }
+      );
+
+    }
+
+
+    /* ============================================================
+       RENDER
+       ============================================================ */
+
+    function render() {
+
+      const filtered =
+        getFiltered();
+
+
+      resultCount.textContent =
+        `${filtered.length} request${filtered.length !== 1
+          ? "s"
+          : ""
+        }`;
+
+
+      const totalPages =
+        Math.max(
+          1,
+          Math.ceil(
+            filtered.length /
+            PER_PAGE
+          )
+        );
+
+
+      if (
+        currentPage >
+        totalPages
+      ) {
+
+        currentPage =
+          totalPages;
+
+      }
+
+
+      if (
+        filtered.length === 0
+      ) {
+
+        requestGrid.innerHTML = `
+
+          <div
+            class="empty-state"
+            style="grid-column:1/-1;"
+          >
+
+            <i class="fa-solid fa-door-closed"></i>
+
+            <h4>
+              No outpass requests
+            </h4>
+
+            <p>
+              Try adjusting your search or filter.
+            </p>
+
+          </div>
+
+        `;
+
+
+        pagination.innerHTML = "";
+
+        return;
+
+      }
+
+
+      const start =
+        (currentPage - 1) *
+        PER_PAGE;
+
+
+      const pageItems =
+        filtered.slice(
+          start,
+          start + PER_PAGE
+        );
+
+
+      requestGrid.innerHTML =
+        pageItems.map(
+          request => {
+
+            const id =
+              escapeHtml(
+                request.id
+              );
+
+
+            const name =
+              escapeHtml(
+                request.name ||
+                "Unknown Student"
+              );
+
+
+            const roll =
+              escapeHtml(
+                request.roll_no ||
+                request.student_id ||
+                "—"
+              );
+
+
+            const room =
+              escapeHtml(
+                request.room_no ||
+                "Not Allocated"
+              );
+
+
+            const purpose =
+              escapeHtml(
+                request.purpose ||
+                "—"
+              );
+
+
+            const status =
+              escapeHtml(
+                request.status ||
+                "Pending"
+              );
+
+
+            const outDate =
+              escapeHtml(
+                request.out_date ||
+                "—"
+              );
+
+
+            const outTime =
+              escapeHtml(
+                request.out_time ||
+                "—"
+              );
+
+
+            const returnTime =
+              escapeHtml(
+                request.return_time ||
+                "—"
+              );
+
+
+            /* --------------------------------------------
+               PROOF
+               -------------------------------------------- */
+
+            const proof =
+              request.proof
+                ? `
+
+                  <a
+                    class="proof-link"
+                    href="http://localhost:3000/uploads/proofs/${encodeURIComponent(
+                  request.proof
+                )}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+
+                    <i class="fa-solid fa-file"></i>
+
+                    View Proof
+
+                  </a>
+
+                `
+                : "Not Uploaded";
+
+
+            /* --------------------------------------------
+               STATUS
+               -------------------------------------------- */
+
+            let statusHtml;
+
+
+            if (
+              status.toLowerCase() ===
+              "approved"
+            ) {
+
+              statusHtml = `
+
+                <span class="badge badge-success">
+                  Approved
+                </span>
+
+              `;
+
+            } else if (
+              status.toLowerCase() ===
+              "rejected"
+            ) {
+
+              statusHtml = `
+
+                <span class="badge badge-danger">
+                  Rejected
+                </span>
+
+              `;
+
+            } else {
+
+              statusHtml = `
+
+                <span class="badge badge-warning">
+                  Pending
+                </span>
+
+              `;
+
+            }
+
+
+            const isFinished =
+              status.toLowerCase() ===
+              "approved" ||
+              status.toLowerCase() ===
+              "rejected";
+
+
+            /* --------------------------------------------
+               CARD
+               -------------------------------------------- */
+
+            return `
+
+              <div class="request-card">
+
+                <div class="rc-head">
+
+                  <div class="mini-avatar">
+
+                    ${typeof initials ===
+                "function"
+                ? initials(name)
+                : name
+                  .substring(
+                    0,
+                    2
+                  )
+                  .toUpperCase()
+              }
+
+                  </div>
+
+
+                  <div>
+
+                    <h4>
+                      ${name}
+                    </h4>
+
+                    <p>
+                      ${roll}
+                      · Room ${room}
+                    </p>
+
+                  </div>
+
+
+                  <div
+                    style="
+                      margin-left:auto;
+                    "
+                  >
+
+                    ${statusHtml}
+
+                  </div>
+
+                </div>
+
+
+                <div class="rc-row">
+
+                  <span>
+                    Date
+                  </span>
+
+                  <span>
+                    ${outDate}
+                  </span>
+
+                </div>
+
+
+                <div class="rc-row">
+
+                  <span>
+                    Out Time
+                  </span>
+
+                  <span>
+                    ${outTime}
+                  </span>
+
+                </div>
+
+
+                <div class="rc-row">
+
+                  <span>
+                    Return Time
+                  </span>
+
+                  <span>
+                    ${returnTime}
+                  </span>
+
+                </div>
+
+
+                <div class="rc-row">
+
+                  <span>
+                    Purpose
+                  </span>
+
+                  <span>
+                    ${purpose}
+                  </span>
+
+                </div>
+
+
+                <div class="rc-row">
+
+                  <span>
+                    Proof
+                  </span>
+
+                  <span>
+                    ${proof}
+                  </span>
+
+                </div>
+
+
+                <div class="rc-actions">
+
+                  <button
+                    class="btn btn-success"
+                    ${isFinished
+                ? "disabled"
+                : ""
+              }
+                    onclick="
+                      approveReq('${id}')
+                    "
+                  >
+
+                    <i class="fa-solid fa-check"></i>
+
+                    Approve
+
+                  </button>
+
+
+                  <button
+                    class="btn btn-danger"
+                    ${isFinished
+                ? "disabled"
+                : ""
+              }
+                    onclick="
+                      rejectReq('${id}')
+                    "
+                  >
+
+                    <i class="fa-solid fa-xmark"></i>
+
+                    Reject
+
+                  </button>
+
+
+                  <button
+                    class="btn btn-ghost"
+                    onclick="
+                      viewDetails('${id}')
+                    "
+                  >
+
+                    <i class="fa-solid fa-eye"></i>
+
+                  </button>
+
+                </div>
+
+              </div>
+
+            `;
+
+          }
+        ).join("");
+
+
+      renderPagination(
+        filtered.length,
+        totalPages
+      );
+
+    }
+
+
+    /* ============================================================
+       PAGINATION
+       ============================================================ */
+
+    function renderPagination(
+      totalItems,
+      totalPages
+    ) {
+
+      if (
+        totalItems <=
+        PER_PAGE
+      ) {
+
+        pagination.innerHTML = "";
+
+        return;
+
+      }
+
+
+      let html = "";
+
+
+      html += `
+
+        <button
+          class="btn btn-ghost"
+          ${currentPage === 1
+          ? "disabled"
+          : ""
+        }
+          onclick="
+            changePage(
+              ${currentPage - 1}
+            )
+          "
+        >
+
+          <i class="fa-solid fa-chevron-left"></i>
+
+        </button>
+
+      `;
+
+
+      for (
+        let i = 1;
+        i <= totalPages;
+        i++
+      ) {
+
+        html += `
+
+          <button
+            class="btn ${i === currentPage
+            ? "btn-primary"
+            : "btn-ghost"
+          }"
+            onclick="
+              changePage(${i})
+            "
+          >
+
+            ${i}
+
+          </button>
+
+        `;
+
+      }
+
+
+      html += `
+
+        <button
+          class="btn btn-ghost"
+          ${currentPage ===
+          totalPages
+          ? "disabled"
+          : ""
+        }
+          onclick="
+            changePage(
+              ${currentPage + 1}
+            )
+          "
+        >
+
+          <i class="fa-solid fa-chevron-right"></i>
+
+        </button>
+
+      `;
+
+
+      pagination.innerHTML =
+        html;
+
+    }
+
+
+    function changePage(page) {
+
+      const filtered =
+        getFiltered();
+
+
+      const totalPages =
+        Math.max(
+          1,
+          Math.ceil(
+            filtered.length /
+            PER_PAGE
+          )
+        );
+
+
+      if (
+        page < 1 ||
+        page > totalPages
+      ) {
+
+        return;
+
+      }
+
+
+      currentPage = page;
+
+      render();
+
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+      });
+
+    }
+
+
+    /* ============================================================
+       APPROVE
+       ============================================================ */
+
+    async function approveReq(id) {
+
+      const request =
+        allOutpassRequests.find(
+          item =>
+            String(item.id) ===
+            String(id)
+        );
+
+
+      if (!request) {
+
+        showToast(
+          "error",
+          "Error",
+          "Outpass request not found."
+        );
+
+        return;
+
+      }
+
+
+      const studentName =
+        request.name ||
+        "Student";
+
+
+      const confirmed =
+        confirm(
+          `Approve outpass request for ${studentName}?`
+        );
+
+
+      if (!confirmed) {
+        return;
+      }
+
+
+      await processApprove(id);
+
+    }
+
+
+    /* ============================================================
+       PROCESS APPROVAL
+       ============================================================ */
+
+    async function processApprove(id) {
+
+      try {
+
+        const request =
+          allOutpassRequests.find(
+            item =>
+              String(item.id) ===
+              String(id)
+          );
+
+
+        if (!request) {
+
+          throw new Error(
+            "Outpass request not found."
+          );
+
+        }
+
+
+        const response =
+          await fetch(
+            `${API_BASE}/outpass/${encodeURIComponent(id)}`,
+            {
+              method: "PATCH",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              body: JSON.stringify({
+
+                status: "Approved",
+
+                approved_by:
+                  getWardenName()
+
+              })
+
+            }
+          );
+
+
+        const data =
+          await response.json();
+
+
+        console.log(
+          "APPROVAL RESPONSE:",
+          data
+        );
+
+
+        if (
+          !response.ok ||
+          !data.success
+        ) {
+
+          throw new Error(
+            data.message ||
+            "Unable to approve outpass."
+          );
+
+        }
+
+
+        showToast(
+          "success",
+          "Outpass approved",
+          `${data.outpass?.name ||
+          request.name ||
+          "Student"
+          }'s outpass has been approved.`
+        );
+
+
+        /*
+         * Reload backend data.
+         * This removes the request from Pending
+         * and changes its status to Approved.
+         */
+
+        await loadOutpassRequests();
+
+
+      } catch (error) {
+
+        console.error(
+          "Approve outpass error:",
+          error
+        );
+
+
+        showToast(
+          "error",
+          "Approval failed",
+          error.message
+        );
+
+      }
+
+    }
+
+
+    /* ============================================================
+       REJECT
+       ============================================================ */
+
+    function rejectReq(id) {
+
+      const request =
+        allOutpassRequests.find(
+          item =>
+            String(item.id) ===
+            String(id)
+        );
+
+
+      if (!request) {
+
+        showToast(
+          "error",
+          "Error",
+          "Outpass request not found."
+        );
+
+        return;
+
+      }
+
+
+      openRejectModal(
+        request
+      );
+
+    }
+
+
+    /* ============================================================
+       REJECTION MODAL
+       ============================================================ */
+
+    function openRejectModal(
+      request
+    ) {
+
+      let overlay =
+        document.getElementById(
+          "rejectModalOverlay"
+        );
+
+
+      if (!overlay) {
+
+        overlay =
+          document.createElement(
+            "div"
+          );
+
+        overlay.className =
+          "modal-overlay";
+
+        overlay.id =
+          "rejectModalOverlay";
+
+        document.body.appendChild(
+          overlay
+        );
+
+
+        overlay.addEventListener(
+          "click",
+          event => {
+
+            if (
+              event.target ===
+              overlay
+            ) {
+
+              overlay.classList.remove(
+                "open"
+              );
+
+            }
+
+          }
+        );
+
+      }
+
+
+      const studentName =
+        escapeHtml(
+          request.name ||
+          "Student"
+        );
+
+
+      overlay.innerHTML = `
+
+        <div class="modal-box">
+
+          <div class="modal-header">
+
+            <h3>
+              Reject Outpass ·
+              ${studentName}
+            </h3>
+
+
+            <button
+              class="modal-close"
+              onclick="
+                document
+                  .getElementById(
+                    'rejectModalOverlay'
+                  )
+                  .classList.remove(
+                    'open'
+                  )
+              "
+            >
+
+              <i class="fa-solid fa-xmark"></i>
+
+            </button>
+
+          </div>
+
+
+          <div class="modal-body">
+
+            <div class="form-row">
+
+              <label>
+                Reason for Rejection
+              </label>
+
+
+              <select id="rejectReasonSelect">
+
+                <option>
+                  Insufficient Reason Provided
+                </option>
+
+                <option>
+                  Destination Not Permitted
+                </option>
+
+                <option>
+                  Parent/Guardian Confirmation Pending
+                </option>
+
+                <option>
+                  Other
+                </option>
+
+              </select>
+
+            </div>
+
+          </div>
+
+
+          <div class="modal-footer">
+
+            <button
+              class="btn btn-ghost"
+              onclick="
+                document
+                  .getElementById(
+                    'rejectModalOverlay'
+                  )
+                  .classList.remove(
+                    'open'
+                  )
+              "
+            >
+
+              Cancel
+
+            </button>
+
+
+            <button
+              class="btn btn-danger"
+              id="confirmRejectBtn"
+            >
+
+              <i class="fa-solid fa-xmark"></i>
+
+              Reject Outpass
+
+            </button>
+
+          </div>
+
+        </div>
+
+      `;
+
+
+      document
+        .getElementById(
+          "confirmRejectBtn"
+        )
+        .addEventListener(
+          "click",
+          async () => {
+
+            const reason =
+              document.getElementById(
+                "rejectReasonSelect"
+              ).value;
+
+
+            await processReject(
+              request.id,
+              reason
+            );
+
+          }
+        );
+
+
+      overlay.classList.add(
+        "open"
+      );
+
+    }
+
+
+    /* ============================================================
+       PROCESS REJECTION
+       ============================================================ */
+
+    async function processReject(
+      id,
+      reason
+    ) {
+
+      try {
+
+        const response =
+          await fetch(
+            `${API_BASE}/outpass/${encodeURIComponent(id)}`,
+            {
+              method: "PATCH",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              body: JSON.stringify({
+
+                status: "Rejected",
+
+                rejection_reason:
+                  reason,
+
+                approved_by:
+                  getWardenName()
+
+              })
+
+            }
+          );
+
+
+        const data =
+          await response.json();
+
+
+        console.log(
+          "REJECTION RESPONSE:",
+          data
+        );
+
+
+        if (
+          !response.ok ||
+          !data.success
+        ) {
+
+          throw new Error(
+            data.message ||
+            "Unable to reject outpass."
+          );
+
+        }
+
+
+        const overlay =
+          document.getElementById(
+            "rejectModalOverlay"
+          );
+
+
+        if (overlay) {
+
+          overlay.classList.remove(
+            "open"
+          );
+
+        }
+
+
+        showToast(
+          "error",
+          "Outpass rejected",
+          `${data.outpass?.name ||
+          "Student"
+          }'s outpass has been rejected.`
+        );
+
+
+        await loadOutpassRequests();
+
+
+      } catch (error) {
+
+        console.error(
+          "Reject outpass error:",
+          error
+        );
+
+
+        showToast(
+          "error",
+          "Rejection failed",
+          error.message
+        );
+
+      }
+
+    }
+
+
+    /* ============================================================
+       VIEW DETAILS
+       ============================================================ */
+
+    function viewDetails(id) {
+
+      const request =
+        allOutpassRequests.find(
+          item =>
+            String(item.id) ===
+            String(id)
+        );
+
+
+      if (!request) {
+
+        showToast(
+          "error",
+          "Error",
+          "Outpass request not found."
+        );
+
+        return;
+
+      }
+
+
+      const proofHtml =
+        request.proof
+          ? `
+
+            <a
+              href="
+                http://localhost:3000/uploads/proofs/${encodeURIComponent(
+            request.proof
+          )}
+              "
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn btn-outline"
+            >
+
+              <i class="fa-solid fa-file"></i>
+
+              View Proof
+
+            </a>
+
+          `
+          : "<p>Not uploaded</p>";
+
+
+      const bodyHtml = `
+
+        <div class="detail-grid">
+
+          <div class="d-item">
+
+            <span>
+              Student Name
+            </span>
+
+            <p>
+              ${escapeHtml(
+        request.name ||
+        "—"
+      )}
+            </p>
+
+          </div>
+
+
+          <div class="d-item">
+
+            <span>
+              Roll / Admission No.
+            </span>
+
+            <p>
+              ${escapeHtml(
+        request.roll_no ||
+        request.student_id ||
+        "—"
+      )}
+            </p>
+
+          </div>
+
+
+          <div class="d-item">
+
+            <span>
+              Room
+            </span>
+
+            <p>
+              ${escapeHtml(
+        request.room_no ||
+        "Not Allocated"
+      )}
+            </p>
+
+          </div>
+
+
+          <div class="d-item">
+
+            <span>
+              Status
+            </span>
+
+            <p>
+              ${escapeHtml(
+        request.status ||
+        "Pending"
+      )}
+            </p>
+
+          </div>
+
+
+          <div class="d-item">
+
+            <span>
+              Out Date
+            </span>
+
+            <p>
+              ${escapeHtml(
+        request.out_date ||
+        "—"
+      )}
+            </p>
+
+          </div>
+
+
+          <div class="d-item">
+
+            <span>
+              Out Time
+            </span>
+
+            <p>
+              ${escapeHtml(
+        request.out_time ||
+        "—"
+      )}
+            </p>
+
+          </div>
+
+
+          <div class="d-item">
+
+            <span>
+              Expected Return
+            </span>
+
+            <p>
+              ${escapeHtml(
+        request.return_time ||
+        "—"
+      )}
+            </p>
+
+          </div>
+
+
+          <div class="d-item">
+
+            <span>
+              Submitted
+            </span>
+
+            <p>
+              ${formatDateTime(
+        request.created_at
+      )}
+            </p>
+
+          </div>
+
+
+          <div
+            class="d-item"
+            style="grid-column:1/-1;"
+          >
+
+            <span>
+              Purpose
+            </span>
+
+            <p>
+              ${escapeHtml(
+        request.purpose ||
+        "—"
+      )}
+            </p>
+
+          </div>
+
+
+          <div
+            class="d-item"
+            style="grid-column:1/-1;"
+          >
+
+            <span>
+              Proof
+            </span>
+
+            <div style="margin-top:8px;">
+
+              ${proofHtml}
+
+            </div>
+
+          </div>
+
+
+          ${request.rejection_reason
+          ? `
+
+                <div
+                  class="d-item"
+                  style="grid-column:1/-1;"
+                >
+
+                  <span>
+                    Rejection Reason
+                  </span>
+
+                  <p>
+                    ${escapeHtml(
+            request.rejection_reason
+          )}
+                  </p>
+
+                </div>
+
+              `
+          : ""
+        }
+
+
+          ${request.token_no
+          ? `
+
+                <div
+                  class="d-item"
+                  style="grid-column:1/-1;"
+                >
+
+                  <span>
+                    Outpass Token
+                  </span>
+
+                  <p>
+                    ${escapeHtml(
+            request.token_no
+          )}
+                  </p>
+
+                </div>
+
+              `
+          : ""
+        }
+
+        </div>
+
+      `;
+
+
+      if (
+        typeof openDetailsModal ===
+        "function"
+      ) {
+
+        openDetailsModal({
+
+          title:
+            `Outpass · ${request.name ||
+            "Student"
+            }`,
+
+          bodyHtml,
+
+          footerHtml: `
+
+            <button
+              class="btn btn-primary"
+              onclick="
+                closeDetailsModal()
+              "
+            >
+
+              Close
+
+            </button>
+
+          `
+
+        });
+
+      } else {
+
+        alert(
+          `Student: ${request.name
+          }\n` +
+
+          `Roll: ${request.roll_no
+          }\n` +
+
+          `Room: ${request.room_no
+          }\n` +
+
+          `Status: ${request.status
+          }\n` +
+
+          `Purpose: ${request.purpose
+          }`
+        );
+
+      }
+
+    }
+
+
+    /* ============================================================
+       WARDEN NAME
+       ============================================================ */
+
+    function getWardenName() {
+
+      const possibleKeys = [
+
+        "wardenName",
+
+        "currentWardenName",
+
+        "loggedInWarden",
+
+        "warden_name"
+
+      ];
+
+
+      for (
+        const key of possibleKeys
+      ) {
+
+        const value =
+          localStorage.getItem(
+            key
+          );
+
+
+        if (value) {
+
+          try {
+
+            const parsed =
+              JSON.parse(value);
+
+
+            if (
+              typeof parsed ===
+              "string"
+            ) {
+
+              return parsed;
+
+            }
+
+
+            if (
+              parsed &&
+              (
+                parsed.name ||
+                parsed.full_name ||
+                parsed.employee_id
+              )
+            ) {
+
+              return (
+                parsed.name ||
+                parsed.full_name ||
+                parsed.employee_id
+              );
+
+            }
+
+          } catch {
+
+            return value;
+
+          }
+
+        }
+
+      }
+
+
+      return "Warden";
+
+    }
+
+
+    /* ============================================================
+       STATUS FILTER
+       ============================================================ */
+
+    statusFilter.addEventListener(
+      "change",
+      () => {
+
+        currentPage = 1;
+
+        render();
+
+      }
+    );
+
+
+    /* ============================================================
+       INITIAL LOAD
+       ============================================================ */
+
+    loadOutpassRequests();
+
+
+    /* ============================================================
+       AUTO REFRESH
+       ============================================================ */
+
+    setInterval(
+      loadOutpassRequests,
+      5000
+    );
+
+  </script>
+
+</body>
+
+</html>

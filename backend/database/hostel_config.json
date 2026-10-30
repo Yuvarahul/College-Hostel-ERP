@@ -1,0 +1,6 @@
+{
+  "name": "HostelERP",
+  "capacityPerRoom": 4,
+  "totalBlocks": 4,
+  "qrValidityMinutes": 120
+}

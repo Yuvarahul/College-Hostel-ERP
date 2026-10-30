@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gatekeeper Details | HostelERP Admin Portal</title>
+<link rel="stylesheet" href="warden_dashboard.css">
+<link rel="stylesheet" href="admin-section.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+<div class="app-shell">
+  <div id="sidebar-root"></div>
+
+  <div class="main-content">
+    <div id="topbar-root"></div>
+
+    <main class="page">
+      <div class="breadcrumb">
+        <a href="admin-dashboard.html">Dashboard</a>
+        <i class="fa-solid fa-chevron-right"></i> Gatekeeper Details
+      </div>
+
+      <div class="greeting-banner">
+        <div>
+          <h2 id="pageTitle">Gatekeeper Details</h2>
+          <p>Gate and security staff accounts, their assigned gate and shift.</p>
+        </div>
+        <i class="fa-solid fa-shield-halved greet-icon" id="pageIcon"></i>
+      </div>
+
+      <div class="admin-stat-strip" id="statStrip" style="display:none"></div>
+
+      <!-- List module: searchable records + View Details -->
+      <section class="card panel" id="tablePanel" style="display:none">
+        <div class="panel-title">
+          <span>Gatekeeper Details</span>
+          <button class="btn-primary" id="addButton" style="display:none">
+            <i class="fa-solid fa-plus"></i> Add Record
+          </button>
+        </div>
+
+        <div class="filter-row">
+          <input class="grow" id="search" placeholder="Search...">
+          <select id="statusFilter" style="display:none"></select>
+          <select id="extraFilter" style="display:none"></select>
+          <span class="muted" id="resultCount">0 records</span>
+        </div>
+
+        <div class="table-wrap">
+          <table class="manage-table">
+            <thead id="thead"></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Details modal -->
+      <div class="modal" id="modal">
+        <div class="modal-panel">
+          <div class="panel-title">
+            <span id="modalTitle">Details</span>
+            <button class="btn-small" onclick="closeModal()">Close</button>
+          </div>
+          <div id="modalBody"></div>
+        </div>
+      </div>
+
+      <!-- Add / Edit modal -->
+      <div class="modal" id="formModal">
+        <div class="modal-panel">
+          <div class="panel-title">
+            <span id="formTitle">Add Record</span>
+            <button class="btn-small" onclick="closeForm()">Close</button>
+          </div>
+          <form onsubmit="saveRecord(event)">
+            <div class="form-grid" id="formFields"></div>
+            <div style="margin-top:16px"><button class="btn-primary" type="submit">Save</button></div>
+          </form>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script src="js/script.js"></script>
+<script src="warden_dashboard.js"></script>
+<script src="admin-shell.js"></script>
+<script>window.ADMIN_SECTION = "security";</script>
+<script src="admin-section.js"></script>
+</body>
+</html>

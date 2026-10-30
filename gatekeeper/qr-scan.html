@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scan QR Pass | GateKeeper</title>
+<link rel="stylesheet" href="gatekeeper-style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+<!-- QR decoder, served from this project (gatekeeper/vendor/jsQR.js).
+     It used to be pulled from a CDN, which meant the scanner silently
+     stopped working whenever the machine was offline. -->
+<script src="vendor/jsQR.js"></script>
+
+<style>
+  .qr-layout { display: grid; grid-template-columns: 400px 1fr; gap: 22px; align-items: flex-start; }
+  @media (max-width: 980px) { .qr-layout { grid-template-columns: 1fr; } }
+
+  .scan-video-wrap { position: relative; width: 100%; aspect-ratio: 1/1; background: #0b1220; border-radius: var(--radius-md); overflow: hidden; }
+  .scan-video-wrap video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .scan-video-wrap .scan-frame { position: absolute; inset: 8%; border: 4px solid #fff; border-radius: 16px; pointer-events: none; box-shadow: 0 0 0 999px rgba(0,0,0,.40); }
+  .scan-video-wrap .scan-frame.hit { border-color: #22c55e; }
+
+  /* Placeholder shown before the camera starts, and whenever it fails. */
+  .cam-placeholder { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; color: #cbd5e1; gap: 8px; }
+  .cam-placeholder i { font-size: 34px; opacity: .65; }
+  .cam-placeholder h4 { color: #f1f5f9; font-size: 14.5px; font-weight: 600; }
+  .cam-placeholder p { font-size: 12.5px; line-height: 1.5; max-width: 300px; }
+
+  .scan-status { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; padding: 10px 12px; border-radius: 10px; font-size: 12.5px; line-height: 1.5; background: var(--grey-bg); color: var(--text-muted); }
+  .scan-status.ok { background: #dcfce7; color: #166534; }
+  .scan-status.warn { background: #fef3c7; color: #92400e; }
+  .scan-status.err { background: #fee2e2; color: #991b1b; }
+  .scan-status i { margin-top: 2px; }
+
+  .scan-btn-row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  .scan-btn-row .btn { flex: 1; min-width: 150px; }
+  .cam-select-row { margin-top: 12px; }
+  .cam-select-row select { width: 100%; padding: 9px 10px; border: 1px solid var(--grey-bg); border-radius: 8px; font: inherit; }
+
+  .manual-row { display: flex; gap: 10px; margin-top: 8px; }
+  .manual-row input { flex: 1; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; margin-top: 14px; }
+  .detail-grid .dt { font-size: 11.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .3px; }
+  .detail-grid .dd { font-size: 13.5px; font-weight: 600; color: var(--text-main); margin-top: 2px; }
+  .movement-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--grey-bg); }
+  .movement-row:last-child { border-bottom: none; }
+  .qr-counters { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+  .qr-counter { background: var(--white); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); padding: 14px 16px; text-align: center; }
+  .qr-counter h4 { font-size: 22px; font-weight: 700; }
+  .qr-counter p { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+  .help-list { margin: 8px 0 0 18px; font-size: 12.5px; color: var(--text-muted); line-height: 1.7; }
+</style>
+</head>
+<body>
+
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="topbar-root"></div>
+
+      <main class="page">
+        <div class="breadcrumb"><a href="dashboard.html">Dashboard</a> <i class="fa-solid fa-chevron-right"></i> Scan QR Pass</div>
+        <div class="page-header">
+          <h2>Scan QR Pass</h2>
+          <p>Scan the student's approved Leave/Outpass QR code for both OUT and IN. The same QR stays valid while the student is outside and becomes permanently invalid after the IN scan.</p>
+        </div>
+
+        <div class="qr-counters" id="qrCounters">
+          <div class="qr-counter"><h4 id="cOut">0</h4><p>Currently Out</p></div>
+          <div class="qr-counter"><h4 id="cTodayOut">0</h4><p>Today's Exits</p></div>
+          <div class="qr-counter"><h4 id="cTodayIn">0</h4><p>Today's Returns</p></div>
+        </div>
+
+        <div class="qr-layout">
+          <!-- LEFT: Scanner + manual entry -->
+          <div class="card panel">
+            <div class="panel-title"><span>Camera Scanner</span></div>
+
+            <div class="scan-video-wrap" id="videoWrap">
+              <video id="scanVideo" playsinline autoplay muted></video>
+              <div class="scan-frame" id="scanFrame" style="display:none"></div>
+              <div class="cam-placeholder" id="camPlaceholder">
+                <i class="fa-solid fa-camera"></i>
+                <h4>Camera is off</h4>
+                <p>Press <strong>Start Camera</strong> below, then hold the student's QR code inside the frame.</p>
+              </div>
+            </div>
+
+            <canvas id="scanCanvas" style="display:none;"></canvas>
+
+            <div class="scan-status" id="scanStatus">
+              <i class="fa-solid fa-circle-info"></i>
+              <span id="scanStatusText">Camera not started yet.</span>
+            </div>
+
+            <div class="cam-select-row" id="camSelectRow" style="display:none">
+              <select id="camSelect" aria-label="Choose camera"></select>
+            </div>
+
+            <div class="scan-btn-row">
+              <button class="btn btn-primary" id="toggleCameraBtn">
+                <i class="fa-solid fa-camera"></i> Start Camera
+              </button>
+              <button class="btn btn-outline" id="uploadBtn">
+                <i class="fa-solid fa-image"></i> Scan from Photo
+              </button>
+              <input type="file" id="qrFile" accept="image/*" style="display:none">
+            </div>
+
+            <div class="form-group" style="margin-top:20px;">
+              <label for="manualToken">Or enter the QR token manually</label>
+              <div class="manual-row">
+                <input type="text" id="manualToken" placeholder="e.g. OP-2026-0007">
+                <button class="btn btn-primary" id="manualVerifyBtn"><i class="fa-solid fa-magnifying-glass"></i> Verify</button>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top:20px;">
+              <label for="searchInput">Search student (name / roll no.)</label>
+              <div class="manual-row">
+                <input type="text" id="searchInput" placeholder="e.g. Priya or AMJ2024001">
+                <button class="btn btn-ghost" id="searchBtn"><i class="fa-solid fa-user"></i> Search</button>
+              </div>
+              <div id="searchResults" style="margin-top:10px;"></div>
+            </div>
+          </div>
+
+          <!-- RIGHT: Verification result + recent movements -->
+          <div>
+            <div class="card panel" id="resultPanel">
+              <div class="panel-title"><span>Verification Result</span></div>
+              <div id="resultBox">
+                <div class="empty-state">
+                  <i class="fa-solid fa-qrcode"></i>
+                  <h4>No QR scanned yet</h4>
+                  <p>Scan a QR code, upload a photo of one, or enter a token to see the student's details here.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="card panel" style="margin-top:20px;">
+              <div class="panel-title">
+                <span>Recent Gate Movements</span>
+                <a href="#" id="refreshHistoryLink">Refresh</a>
+              </div>
+              <div id="historyList"></div>
+            </div>
+
+            <div class="card panel" style="margin-top:20px;">
+              <div class="panel-title"><span>If the camera will not start</span></div>
+              <ul class="help-list">
+                <li>Open the portal as <strong>http://localhost:3000/gatekeeper/qr-scan.html</strong>. Browsers block cameras on plain IP addresses and on <code>file://</code> pages.</li>
+                <li>Allow camera access when the browser asks. If you blocked it earlier, click the padlock in the address bar and reset the camera permission.</li>
+                <li>Close any other app using the webcam (Zoom, Teams, Meet, the Camera app).</li>
+                <li>Still stuck? Use <strong>Scan from Photo</strong> or type the token &mdash; both verify exactly the same way.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+<script src="gatekeeper-auth-adapter.js"></script>
+<script src="gatekeeper-data.js"></script>
+<script src="gatekeeper.js"></script>
+<script>
+  const session = requireAuth();
+  if (session) {
+    initShell("qr-scan", { showSearch: false });
+
+    const QR_API_BASE = (window.location.port === "3000") ? "" : "http://localhost:3000";
+    const CAM_PREF_KEY = "gatekeeper_preferred_camera";
+
+    const gatekeeperId = session.staffCode || "";
+    const gatekeeperName = session.name || "";
+
+    let currentVerified = null;
+    let stream = null;
+    let scanning = false;
+    let rafId = null;
+    let lastScanTime = 0;
+
+    const videoEl = document.getElementById("scanVideo");
+    const canvasEl = document.getElementById("scanCanvas");
+    /* willReadFrequently avoids Chrome's slow-readback warning, since
+       getImageData runs about ten times a second while scanning. */
+    const canvasCtx = canvasEl.getContext("2d", { willReadFrequently: true });
+    const toggleCameraBtn = document.getElementById("toggleCameraBtn");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const qrFile = document.getElementById("qrFile");
+    const camPlaceholder = document.getElementById("camPlaceholder");
+    const scanFrame = document.getElementById("scanFrame");
+    const camSelect = document.getElementById("camSelect");
+    const camSelectRow = document.getElementById("camSelectRow");
+    const statusBox = document.getElementById("scanStatus");
+    const statusText = document.getElementById("scanStatusText");
+    const resultBox = document.getElementById("resultBox");
+    const manualToken = document.getElementById("manualToken");
+    const manualVerifyBtn = document.getElementById("manualVerifyBtn");
+    const searchInput = document.getElementById("searchInput");
+    const searchBtn = document.getElementById("searchBtn");
+    const searchResults = document.getElementById("searchResults");
+    const historyList = document.getElementById("historyList");
+
+    /* The bundled build puts a function on window.jsQR, but some builds
+       wrap it as { default: fn } — accept either. */
+    const decodeQr = (typeof jsQR === "function")
+      ? jsQR
+      : (window.jsQR && typeof window.jsQR.default === "function" ? window.jsQR.default : null);
+
+    /* ---------------- Status line ---------------- */
+    const ICONS = { info: "fa-circle-info", ok: "fa-circle-check", warn: "fa-triangle-exclamation", err: "fa-circle-xmark" };
+    function setStatus(kind, text) {
+      statusBox.className = `scan-status ${kind === "info" ? "" : kind}`.trim();
+      statusBox.querySelector("i").className = `fa-solid ${ICONS[kind] || ICONS.info}`;
+      statusText.textContent = text;
+    }
+    function setPlaceholder(icon, heading, body) {
+      camPlaceholder.style.display = "grid";
+      camPlaceholder.innerHTML = `<i class="fa-solid ${icon}"></i><h4>${heading}</h4><p>${body}</p>`;
+    }
+
+    /* ---------------- Camera ---------------- */
+    function cameraSupported() {
+      /* getUserMedia only exists in a secure context: https, or http on
+         localhost / 127.0.0.1. This is the most common reason the
+         scanner looks broken. */
+      if (!window.isSecureContext) {
+        const msg = "The browser hides the camera on this address. Open http://localhost:3000/gatekeeper/qr-scan.html, or use HTTPS.";
+        setStatus("err", msg);
+        setPlaceholder("fa-lock", "Camera blocked by the browser",
+          "Open the portal on <strong>localhost</strong> or over HTTPS, or use Scan from Photo / manual token instead.");
+        return false;
+      }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setStatus("err", "This browser does not support camera access. Try Chrome or Edge, or use Scan from Photo.");
+        setPlaceholder("fa-ban", "Camera not supported", "Use <strong>Scan from Photo</strong> or type the token manually.");
+        return false;
+      }
+      if (!decodeQr) {
+        setStatus("err", "The QR decoder (vendor/jsQR.js) did not load. Re-copy the project folder, then reload this page.");
+        return false;
+      }
+      return true;
+    }
+
+    /* Try the saved camera first, then a rear camera, then anything. */
+    async function openStream() {
+      const preferred = localStorage.getItem(CAM_PREF_KEY);
+      const attempts = [];
+      if (preferred) attempts.push({ video: { deviceId: { exact: preferred } }, audio: false });
+      attempts.push({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+      attempts.push({ video: true, audio: false });
+
+      let lastError = null;
+      for (const constraints of attempts) {
+        try {
+          return await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (err) {
+          lastError = err;
+          /* A denied permission fails every attempt — stop early. */
+          if (err && (err.name === "NotAllowedError" || err.name === "SecurityError")) break;
+        }
+      }
+      throw lastError || new Error("No camera could be opened.");
+    }
+
+    async function listCameras() {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const cams = devices.filter(d => d.kind === "videoinput");
+        if (cams.length < 2) { camSelectRow.style.display = "none"; return; }
+
+        const track = stream && stream.getVideoTracks()[0];
+        const active = track ? track.getSettings().deviceId : "";
+        camSelect.innerHTML = cams.map((c, i) =>
+          `<option value="${c.deviceId}" ${c.deviceId === active ? "selected" : ""}>${c.label || "Camera " + (i + 1)}</option>`
+        ).join("");
+        camSelectRow.style.display = "block";
+      } catch (e) {
+        camSelectRow.style.display = "none";
+      }
+    }
+
+    async function startCamera() {
+      if (!cameraSupported()) return;
+
+      setStatus("info", "Starting camera… allow access if the browser asks.");
+      toggleCameraBtn.disabled = true;
+
+      try {
+        stream = await openStream();
+        videoEl.srcObject = stream;
+        try { await videoEl.play(); } catch (e) { /* the autoplay attribute covers this */ }
+
+        scanning = true;
+        camPlaceholder.style.display = "none";
+        scanFrame.style.display = "block";
+        toggleCameraBtn.innerHTML = `<i class="fa-solid fa-video-slash"></i> Stop Camera`;
+        setStatus("ok", "Camera active — hold the QR code 15–30 cm away, fully inside the white frame.");
+
+        await listCameras();
+        rafId = requestAnimationFrame(tickScan);
+      } catch (err) {
+        console.error("Camera error:", err);
+        stopCamera();
+
+        const messages = {
+          NotAllowedError: "Camera permission was denied. Click the padlock in the address bar, allow the camera, then press Start Camera again.",
+          PermissionDeniedError: "Camera permission was denied. Allow it from the padlock in the address bar and try again.",
+          NotFoundError: "No camera was found on this computer. Plug in a webcam, or use Scan from Photo.",
+          DevicesNotFoundError: "No camera was found on this computer. Plug in a webcam, or use Scan from Photo.",
+          NotReadableError: "The camera is already in use by another app (Zoom, Teams, Camera). Close it and press Start Camera again.",
+          TrackStartError: "The camera could not start. Close any other app using it and try again.",
+          OverconstrainedError: "The saved camera is no longer available. Pick a different one and try again."
+        };
+        if (err && err.name === "OverconstrainedError") localStorage.removeItem(CAM_PREF_KEY);
+
+        const message = (err && messages[err.name]) || "The camera could not be started. Use Scan from Photo or enter the token manually.";
+        setStatus("err", message);
+        setPlaceholder("fa-video-slash", "Camera unavailable", message);
+        showToast("error", "Camera unavailable", message);
+      } finally {
+        toggleCameraBtn.disabled = false;
+      }
+    }
+
+    function stopCamera(statusMessage) {
+      scanning = false;
+      if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+      if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+      videoEl.srcObject = null;
+      scanFrame.style.display = "none";
+      scanFrame.classList.remove("hit");
+      toggleCameraBtn.innerHTML = `<i class="fa-solid fa-camera"></i> Start Camera`;
+      if (statusMessage) setStatus("info", statusMessage);
+    }
+
+    camSelect.addEventListener("change", async () => {
+      localStorage.setItem(CAM_PREF_KEY, camSelect.value);
+      stopCamera();
+      await startCamera();
+    });
+
+    toggleCameraBtn.addEventListener("click", () => {
+      if (scanning) {
+        stopCamera("Camera stopped.");
+        setPlaceholder("fa-camera", "Camera is off", "Press <strong>Start Camera</strong> to scan again.");
+      } else {
+        startCamera();
+      }
+    });
+
+    /* ---------------- Decode loop ---------------- */
+    function tickScan(timestamp = 0) {
+      if (!scanning) return;
+
+      /* About ten decodes a second is plenty and keeps the UI smooth. */
+      if (timestamp - lastScanTime < 100) { rafId = requestAnimationFrame(tickScan); return; }
+      lastScanTime = timestamp;
+
+      if (videoEl.readyState >= 2 && videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
+        const size = Math.min(videoEl.videoWidth, videoEl.videoHeight) * 0.85;
+        const sx = (videoEl.videoWidth - size) / 2;
+        const sy = (videoEl.videoHeight - size) / 2;
+
+        canvasEl.width = Math.floor(size);
+        canvasEl.height = Math.floor(size);
+        canvasCtx.drawImage(videoEl, sx, sy, size, size, 0, 0, canvasEl.width, canvasEl.height);
+
+        try {
+          const image = canvasCtx.getImageData(0, 0, canvasEl.width, canvasEl.height);
+          const code = decodeQr(image.data, image.width, image.height, { inversionAttempts: "attemptBoth" });
+          if (code && code.data) {
+            scanFrame.classList.add("hit");
+            stopCamera();
+            setStatus("ok", "QR code read — verifying with the server…");
+            setPlaceholder("fa-circle-check", "QR captured", "Check the verification result on the right.");
+            verifyQr(code.data.trim());
+            return;
+          }
+        } catch (err) {
+          /* A single unreadable frame is normal — keep scanning. */
+          console.debug("Frame decode skipped:", err && err.message);
+        }
+      }
+
+      rafId = requestAnimationFrame(tickScan);
+    }
+
+    /* ---------------- Scan from a photo (no camera needed) ---------------- */
+    uploadBtn.addEventListener("click", () => {
+      if (!decodeQr) {
+        showToast("error", "Decoder missing", "vendor/jsQR.js did not load. Reload the page.");
+        return;
+      }
+      qrFile.click();
+    });
+
+    qrFile.addEventListener("change", () => {
+      const file = qrFile.files && qrFile.files[0];
+      if (!file) return;
+      setStatus("info", "Reading the image…");
+
+      const img = new Image();
+      img.onload = () => {
+        const max = 1200;
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        canvasEl.width = Math.round(img.width * scale);
+        canvasEl.height = Math.round(img.height * scale);
+        canvasCtx.drawImage(img, 0, 0, canvasEl.width, canvasEl.height);
+
+        try {
+          const image = canvasCtx.getImageData(0, 0, canvasEl.width, canvasEl.height);
+          const code = decodeQr(image.data, image.width, image.height, { inversionAttempts: "attemptBoth" });
+          if (code && code.data) {
+            setStatus("ok", "QR code found in the image — verifying…");
+            verifyQr(code.data.trim());
+          } else {
+            setStatus("warn", "No QR code was found in that image. Try a sharper, closer photo, or type the token.");
+            showToast("warning", "No QR found", "Try a clearer photo of the pass.");
+          }
+        } catch (err) {
+          setStatus("err", "That image could not be read.");
+        }
+        URL.revokeObjectURL(img.src);
+        qrFile.value = "";
+      };
+      img.onerror = () => {
+        setStatus("err", "That file is not a readable image.");
+        qrFile.value = "";
+      };
+      img.src = URL.createObjectURL(file);
+    });
+
+    /* ---------------- Manual token entry ---------------- */
+    manualVerifyBtn.addEventListener("click", () => {
+      const val = manualToken.value.trim();
+      if (!val) { showToast("warning", "Enter a token", "Type the token printed on the student's pass."); return; }
+      verifyQr(val);
+    });
+    manualToken.addEventListener("keydown", (e) => { if (e.key === "Enter") manualVerifyBtn.click(); });
+
+    /* ---------------- Backend calls ---------------- */
+    async function apiPost(path, body) {
+      try {
+        const res = await fetch(`${QR_API_BASE}${path}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+        const data = await res.json().catch(() => ({}));
+        return { ok: res.ok, data };
+      } catch (e) {
+        return { ok: false, data: { message: "Cannot reach the server. Make sure node server.js is running." } };
+      }
+    }
+
+    async function apiGet(path) {
+      try {
+        const res = await fetch(`${QR_API_BASE}${path}`);
+        const data = await res.json().catch(() => ({}));
+        return { ok: res.ok, data };
+      } catch (e) {
+        return { ok: false, data: { message: "Cannot reach the server. Make sure node server.js is running." } };
+      }
+    }
+
+    async function verifyQr(qrText) {
+      resultBox.innerHTML = `<div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i><h4>Verifying…</h4></div>`;
+      const { ok, data } = await apiPost("/api/gatekeeper/verify-qr", { qr: qrText });
+
+      if (!ok || !data.success) {
+        currentVerified = null;
+        const message = data.message || "Invalid QR code.";
+        resultBox.innerHTML = `
+          <div class="empty-state">
+            <i class="fa-solid fa-circle-xmark" style="color:var(--danger);"></i>
+            <h4>${message}</h4>
+            <p>Scan again, or ask the student for the token on their approval message.</p>
+          </div>
+          <button class="btn btn-outline btn-block" id="rescanBtn" style="margin-top:14px;">
+            <i class="fa-solid fa-camera"></i> Scan another QR
+          </button>`;
+        document.getElementById("rescanBtn").addEventListener("click", startCamera);
+        setStatus("err", message);
+        showToast("error", "Verification failed", message);
+        return;
+      }
+
+      currentVerified = { qr: qrText, ...data };
+      setStatus("ok", `Verified: ${data.student.full_name} (${data.request.token_no}).`);
+      renderResult(data);
+    }
+
+    function renderResult(data) {
+      const s = data.student;
+      const r = data.request;
+      const isOut = data.gate_status === "OUT";
+      const isReturnQr = data.qr_type === "return";
+
+      const qrStatusRow = isReturnQr ? `
+          <div><div class="dt">QR Status</div><div class="dd" style="color:#15803D;">${data.qr_status || "ACTIVE"}</div></div>
+          <div><div class="dt">Valid Until</div><div class="dd">${data.valid_until ? new Date(data.valid_until).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "—"}</div></div>
+      ` : "";
+
+      resultBox.innerHTML = `
+        <div class="person-summary">
+          ${s.passport_photo ? `<img src="${QR_API_BASE}/uploads/students/${encodeURIComponent(s.passport_photo)}" alt="Student photo" style="width:64px;height:64px;border-radius:10px;object-fit:cover;border:1px solid #ddd;" onerror="this.style.display='none';">` : `<div class="mini-avatar">${(s.full_name || "??").split(" ").map(w => w[0]).slice(0,2).join("").toUpperCase()}</div>`}
+          <div>
+            <h3>${s.full_name}</h3>
+            <p>${s.roll_no} · ${s.department || "—"} · Room ${s.room_no || "—"}</p>
+          </div>
+          <span class="status-pill ${isOut ? "out" : "in"}">${isOut ? "Currently OUT" : "Currently IN"}</span>
+        </div>
+
+        <div class="detail-grid">
+          ${qrStatusRow}
+          <div><div class="dt">Request Type</div><div class="dd">${r.request_type}</div></div>
+          <div><div class="dt">Token</div><div class="dd">${r.token_no}</div></div>
+          <div><div class="dt">Admission No.</div><div class="dd">${s.admission_no || "—"}</div></div>
+          <div><div class="dt">Contact No.</div><div class="dd">${s.phone_no || "—"}</div></div>
+          <div><div class="dt">Parent/Guardian No.</div><div class="dd">${s.parents_phone || "—"}</div></div>
+          <div><div class="dt">Approved By</div><div class="dd">${r.approved_by || "—"}</div></div>
+          <div><div class="dt">Approved On</div><div class="dd">${r.approved_date ? new Date(r.approved_date).toLocaleString("en-IN") : "—"}</div></div>
+          ${r.request_type === "Outpass" ? `
+            <div><div class="dt">Out Date</div><div class="dd">${r.allowed_out_date || "—"}</div></div>
+            <div><div class="dt">Out Time</div><div class="dd">${r.allowed_out_time || "—"}</div></div>
+            <div><div class="dt">Expected Return</div><div class="dd">${r.expected_return_time || "—"}</div></div>
+          ` : `
+            <div><div class="dt">Leave Start</div><div class="dd">${r.leave_start_date || "—"}</div></div>
+            <div><div class="dt">Leave End</div><div class="dd">${r.leave_end_date || "—"}</div></div>
+          `}
+          <div style="grid-column: 1 / -1;"><div class="dt">Purpose / Reason</div><div class="dd">${r.purpose || "—"}</div></div>
+        </div>
+
+        <button class="btn ${isOut ? "btn-success" : "btn-danger"} btn-block" id="actionBtn" style="margin-top:18px;">
+          <i class="fa-solid ${isOut ? "fa-right-to-bracket" : "fa-right-from-bracket"}"></i>
+          ${isOut ? "Student In" : "Student Out"}
+        </button>
+
+      `;
+
+      document.getElementById("actionBtn").addEventListener("click", () => doAction(isOut ? "in" : "out"));
+    }
+
+    async function doAction(direction) {
+      if (!currentVerified) return;
+      const actionBtn = document.getElementById("actionBtn");
+      if (actionBtn) { actionBtn.disabled = true; actionBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Recording…`; }
+
+      const endpoint = direction === "out" ? "/api/gatekeeper/student-out" : "/api/gatekeeper/student-in";
+      const { ok, data } = await apiPost(endpoint, {
+        qr: currentVerified.qr,
+        gatekeeper_id: gatekeeperId,
+        gatekeeper_name: gatekeeperName
+      });
+
+      if (!ok || !data.success) {
+        const message = data.message || "Please try again.";
+        showToast("error", direction === "out" ? "Could not mark OUT" : "Could not mark IN", message);
+        setStatus("err", message);
+        if (currentVerified) renderResult(currentVerified);
+        return;
+      }
+
+      showToast("success", direction === "out" ? "Student marked OUT" : "Student marked IN",
+        `${currentVerified.student.full_name} — ${data.message}`);
+      if (direction === "out") {
+        /* The SAME approval QR remains valid while the student is
+           outside. It is consumed only after the IN scan. */
+        const name = currentVerified.student.full_name;
+        currentVerified = null;
+        setStatus("ok", `${name} marked OUT. The same QR must be scanned when the student returns.`);
+        resultBox.innerHTML = `
+          <div class="empty-state">
+            <i class="fa-solid fa-circle-check" style="color:#15803D;"></i>
+            <h4>Student marked OUT</h4>
+            <p>${data.message}</p>
+            <p style="margin-top:8px;"><strong>Same QR:</strong> scan the student's original QR again when they return. After IN, the QR becomes permanently invalid.</p>
+          </div>
+          <button class="btn btn-outline btn-block" id="rescanBtn" style="margin-top:14px;">
+            <i class="fa-solid fa-camera"></i> Scan next student
+          </button>
+        `;
+        document.getElementById("rescanBtn").addEventListener("click", startCamera);
+        loadStats();
+        loadHistory();
+        return;
+      }
+
+      const inName = currentVerified.student.full_name;
+      currentVerified = null;
+      setStatus("ok", `${inName} marked IN.`);
+      resultBox.innerHTML = `
+        <div class="empty-state">
+          <i class="fa-solid fa-circle-check" style="color:#15803D;"></i>
+          <h4>Student marked IN</h4>
+          <p>${data.message}</p>
+        </div>
+        <button class="btn btn-outline btn-block" id="rescanBtn" style="margin-top:14px;">
+          <i class="fa-solid fa-camera"></i> Scan next student
+        </button>`;
+      document.getElementById("rescanBtn").addEventListener("click", startCamera);
+      loadStats();
+      loadHistory();
+    }
+
+    /* ---------------- Manual search ---------------- */
+    searchBtn.addEventListener("click", doSearch);
+    searchInput.addEventListener("keydown", (e) => { if (e.key === "Enter") doSearch(); });
+
+    async function doSearch() {
+      const q = searchInput.value.trim();
+      if (!q) return;
+      const { ok, data } = await apiGet(`/api/gatekeeper/student/${encodeURIComponent(q)}`);
+      if (!ok || !data.success) {
+        searchResults.innerHTML = `<div class="empty-state" style="padding:20px;"><i class="fa-solid fa-user-xmark"></i><p>${data.message || "No matching student."}</p></div>`;
+        return;
+      }
+      searchResults.innerHTML = data.students.map(s => `
+        <div class="movement-row">
+          ${s.passport_photo ? `<img src="${QR_API_BASE}/uploads/students/${encodeURIComponent(s.passport_photo)}" alt="Student photo" style="width:42px;height:42px;border-radius:8px;object-fit:cover;">` : `<div class="mini-avatar">${(s.full_name || "??").split(" ").map(w => w[0]).slice(0,2).join("").toUpperCase()}</div>`}
+          <div style="flex:1;">
+            <h4 style="font-size:13px; font-weight:600;">${s.full_name}</h4>
+            <p style="font-size:12px; color:var(--text-muted);">${s.roll_no} · Room ${s.room_no} · ${s.department || "—"}</p>
+          </div>
+          <span class="status-pill ${s.gate_status === "OUT" ? "out" : "in"}">${s.gate_status}</span>
+        </div>
+      `).join("");
+    }
+
+    /* ---------------- Stats + history ---------------- */
+    async function loadStats() {
+      const { ok, data } = await apiGet("/api/gatekeeper/stats");
+      if (!ok || !data.success) return;
+      document.getElementById("cOut").textContent = data.stats.currently_out;
+      document.getElementById("cTodayOut").textContent = data.stats.todays_out;
+      document.getElementById("cTodayIn").textContent = data.stats.todays_in;
+    }
+
+    async function loadHistory() {
+      const { ok, data } = await apiGet("/api/gatekeeper/history");
+      if (!ok || !data.success || !data.movements.length) {
+        historyList.innerHTML = `<div class="empty-state"><i class="fa-solid fa-clock-rotate-left"></i><h4>No movements yet</h4><p>OUT/IN scans will appear here.</p></div>`;
+        return;
+      }
+      historyList.innerHTML = data.movements.slice(0, 10).map(m => `
+        <div class="movement-row">
+          <div class="mini-avatar">${(m.name || "??").split(" ").map(w => w[0]).slice(0,2).join("").toUpperCase()}</div>
+          <div style="flex:1;">
+            <h4 style="font-size:13px; font-weight:600;">${m.name} <span style="font-weight:400; color:var(--text-muted);">· ${m.roll_no}</span></h4>
+            <p style="font-size:12px; color:var(--text-muted);">${m.request_type} · Out ${m.out_time}${m.in_time ? " · In " + m.in_time : ""} · Room ${m.room_no}</p>
+          </div>
+          <span class="status-pill ${m.status === "OUT" ? "out" : "in"}">${m.status}</span>
+        </div>
+      `).join("");
+    }
+
+    document.getElementById("refreshHistoryLink").addEventListener("click", (e) => { e.preventDefault(); loadHistory(); loadStats(); });
+
+    /* Release the camera when the tab is hidden or the page unloads. */
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden && scanning) {
+        stopCamera("Camera paused because the tab lost focus. Press Start Camera to resume.");
+        setPlaceholder("fa-camera", "Camera paused", "Press <strong>Start Camera</strong> to resume scanning.");
+      }
+    });
+    window.addEventListener("beforeunload", () => stopCamera());
+
+    if (!decodeQr) {
+      setStatus("err", "The QR decoder (vendor/jsQR.js) did not load. Manual token entry still works.");
+    }
+
+    loadStats();
+    loadHistory();
+  }
+</script>
+</body>
+</html>

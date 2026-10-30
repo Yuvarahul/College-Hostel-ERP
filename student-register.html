@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Student Registration | Hostel Management ERP</title>
+
+  <link rel="stylesheet" href="css/style.css">
+
+  <style>
+    .student-name-autocomplete {
+      position: relative;
+    }
+
+    .autocomplete-wrap {
+      position: relative;
+    }
+
+    .autocomplete-list {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(100% + 4px);
+      z-index: 1000;
+      display: none;
+      max-height: 240px;
+      overflow-y: auto;
+      background: #fff;
+      border: 1px solid #dbe3ef;
+      border-radius: 10px;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, .12);
+    }
+
+    .autocomplete-item {
+      padding: 11px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid #eef2f7;
+    }
+
+    .autocomplete-item:last-child {
+      border-bottom: 0;
+    }
+
+    .autocomplete-item:hover,
+    .autocomplete-item.active {
+      background: #f1f5ff;
+    }
+
+    .autocomplete-name {
+      font-weight: 600;
+      color: #172033;
+    }
+
+    .autocomplete-meta {
+      margin-top: 3px;
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .autocomplete-empty {
+      padding: 12px 14px;
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    .passport-photo-preview {
+      margin-top: 10px;
+      min-height: 0;
+    }
+
+    .passport-photo-preview img {
+      width: 120px;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid #dbe3ef;
+      display: block;
+    }
+  </style>
+
+</head>
+
+<body>
+
+  <div class="bg-texture"></div>
+
+  <div class="standalone-card">
+
+    <div class="auth-card wide">
+
+      <div class="top-emblem">
+
+        <div class="logo-slot">
+
+          <!-- Replace with your actual logo file path -->
+          <img
+            src="images/logo.png"
+            alt="College Logo"
+            class="college-logo"
+          >
+
+        </div>
+
+        <div>
+
+          <div class="college-name">
+            Agurchand Manmull Jain College
+          </div>
+
+          <div class="college-sub">
+            Hostel Management
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <h1>Student Registration</h1>
+
+      <p class="auth-sub">
+        Complete your profile to create your hostel account.
+      </p>
+
+
+      <form id="studentRegisterForm" novalidate>
+
+
+        <!-- STUDENT NAME + ADMISSION NUMBER -->
+
+        <div class="field two-col">
+
+          <div class="field student-name-autocomplete">
+
+            <label for="regName">
+              Student Name
+            </label>
+
+            <div class="autocomplete-wrap">
+
+              <input
+                type="text"
+                id="regName"
+                name="studentName"
+                placeholder="Type the first letter of the student name"
+                autocomplete="off"
+                required
+              >
+
+              <div
+                id="studentNameSuggestions"
+                class="autocomplete-list"
+                role="listbox"
+              ></div>
+
+            </div>
+
+            <span class="field-hint">
+              Start typing the student's name to select a record from students.csv.
+            </span>
+
+          </div>
+
+
+          <div class="field">
+
+            <label for="regAdmissionNo">
+              Roll Number / Admission Number
+            </label>
+
+            <input
+              type="text"
+              id="regAdmissionNo"
+              name="admissionNo"
+              placeholder="AMJ2024001"
+              required
+            >
+
+          </div>
+
+        </div>
+
+
+        <!-- DEPARTMENT + YEAR -->
+
+        <div
+          class="field two-col"
+          style="margin-top:16px;"
+        >
+
+          <div class="field">
+
+            <label for="regDept">
+              Department
+            </label>
+
+            <select
+              id="regDept"
+              name="department"
+              required
+            >
+
+              <option
+                value=""
+                disabled
+                selected
+              >
+                Select department
+              </option>
+
+              <option>
+                B.Com General
+              </option>
+
+              <option>
+                B.Com CS
+              </option>
+
+              <option>
+                BBA
+              </option>
+
+              <option>
+                B.Sc Computer Science
+              </option>
+
+              <option>
+                B.Sc Mathematics
+              </option>
+
+              <option>
+                BCA
+              </option>
+
+              <option>
+                M.Com
+              </option>
+
+            </select>
+
+          </div>
+
+
+          <div class="field">
+
+            <label for="regYear">
+              Year
+            </label>
+
+            <select
+              id="regYear"
+              name="year"
+              required
+            >
+
+              <option
+                value=""
+                disabled
+                selected
+              >
+                Select year
+              </option>
+
+              <option>
+                1st Year
+              </option>
+
+              <option>
+                2nd Year
+              </option>
+
+              <option>
+                3rd Year
+              </option>
+
+            </select>
+
+          </div>
+
+        </div>
+
+
+        <!-- CONTACT + EMAIL -->
+
+        <div
+          class="field two-col"
+          style="margin-top:16px;"
+        >
+
+          <div class="field">
+
+            <label for="regStudentContact">
+              Student Contact
+            </label>
+
+            <input
+              type="tel"
+              id="regStudentContact"
+              name="studentContact"
+              placeholder="10-digit mobile number"
+              pattern="[0-9]{10}"
+              required
+            >
+
+          </div>
+
+
+          <div class="field">
+
+            <label for="regEmail">
+              Email Address
+            </label>
+
+            <input
+              type="email"
+              id="regEmail"
+              name="email"
+              placeholder="you@example.com"
+              required
+            >
+
+          </div>
+
+        </div>
+
+
+        <!-- PARENT CONTACT -->
+
+        <div
+          class="field"
+          style="margin-top:16px;"
+        >
+
+          <label for="regParentContact">
+            Parent Contact
+          </label>
+
+          <input
+            type="tel"
+            id="regParentContact"
+            name="parentContact"
+            placeholder="10-digit mobile number"
+            pattern="[0-9]{10}"
+            required
+          >
+
+        </div>
+
+
+        <!-- ADDRESS -->
+
+        <div class="field">
+
+          <label for="regAddress">
+            Address
+          </label>
+
+          <textarea
+            id="regAddress"
+            name="address"
+            placeholder="Permanent address"
+            required
+          ></textarea>
+
+        </div>
+
+
+        <!-- PASSWORD -->
+
+        <div
+          class="field two-col"
+          style="margin-top:16px;"
+        >
+
+          <div class="field has-icon">
+
+            <label for="regPassword">
+              Password
+            </label>
+
+            <div class="input-wrap">
+
+              <input
+                type="password"
+                id="regPassword"
+                name="password"
+                placeholder="Create password"
+                autocomplete="new-password"
+                required
+              >
+
+              <button
+                type="button"
+                class="toggle-pass"
+                data-target="regPassword"
+                aria-label="Show password"
+              >
+                👁️
+              </button>
+
+            </div>
+
+          </div>
+
+
+          <div class="field has-icon">
+
+            <label for="regConfirmPassword">
+              Confirm Password
+            </label>
+
+            <div class="input-wrap">
+
+              <input
+                type="password"
+                id="regConfirmPassword"
+                placeholder="Re-enter password"
+                autocomplete="new-password"
+                required
+              >
+
+              <button
+                type="button"
+                class="toggle-pass"
+                data-target="regConfirmPassword"
+                aria-label="Show password"
+              >
+                👁️
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- PASSPORT PHOTO -->
+
+        <div
+          class="field"
+          style="margin-top:16px;"
+        >
+
+          <label for="regPassportPhoto">
+            Passport Size Photo
+          </label>
+
+          <input
+            type="file"
+            id="regPassportPhoto"
+            name="passportPhoto"
+            accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+            required
+          >
+
+          <span class="field-hint">
+            Upload a clear passport-size photo — JPG or PNG, max 2 MB.
+          </span>
+
+          <div
+            id="passportPhotoPreview"
+            class="passport-photo-preview"
+            aria-live="polite"
+          ></div>
+
+        </div>
+
+
+        <!-- ID PROOF -->
+
+        <div
+          class="field"
+          style="margin-top:16px;"
+        >
+
+          <label for="regIdProof">
+            ID Proof
+          </label>
+
+          <input
+            type="file"
+            id="regIdProof"
+            name="idProof"
+            accept=".jpg,.jpeg,.png,.pdf"
+            required
+          >
+
+          <span class="field-hint">
+            JPG, PNG, or PDF — max size 2 MB
+          </span>
+
+        </div>
+
+
+        <!-- SUBMIT -->
+
+        <button
+          type="submit"
+          class="btn-primary"
+          style="margin-top:20px;"
+        >
+          Submit
+        </button>
+
+        <!-- Registration result is intentionally shown below the Submit button. -->
+        <div class="alert registration-result-alert" id="registerAlert" aria-live="polite"></div>
+
+      </form>
+
+
+      <!-- LOGIN LINK -->
+
+      <div class="form-footnote">
+
+        Already have an account?
+
+        <a href="student-login.html">
+          Login
+        </a>
+
+      </div>
+
+
+      <!-- BACK HOME -->
+
+      <a
+        href="index.html"
+        class="back-home"
+      >
+        ← Back to Home
+      </a>
+
+    </div>
+
+  </div>
+
+
+  <!-- JAVASCRIPT -->
+
+  <script src="students.js"></script>
+
+  <script src="registrations.js"></script>
+
+  <script src="js/script.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Pending Requests | HostelERP Warden Portal</title>
+
+  <link rel="stylesheet" href="warden_dashboard.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+
+<body>
+
+  <div class="app-shell">
+
+    <!-- SIDEBAR -->
+    <div id="sidebar-root"></div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+
+      <!-- TOPBAR -->
+      <div id="topbar-root"></div>
+
+      <main class="page">
+
+        <!-- BREADCRUMB -->
+        <div class="breadcrumb">
+          <a href="warden_dashboard.html">Dashboard</a>
+          <i class="fa-solid fa-chevron-right"></i>
+          Pending Requests
+        </div>
+
+        <!-- PAGE HEADER -->
+        <div class="page-header">
+          <h2>Pending Requests</h2>
+          <p>Review outpass, leave, and registration requests awaiting your decision.</p>
+        </div>
+
+        <!-- REQUEST COUNTS -->
+        <div class="stat-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
+
+          <!-- OUTPASS -->
+          <a href="outpass-requests.html" class="card" style="
+            padding:24px;
+            display:flex;
+            align-items:center;
+            gap:18px;
+            text-decoration:none;
+          ">
+            <div class="stat-icon blue" style="
+              width:56px;
+              height:56px;
+              font-size:22px;
+            ">
+              <i class="fa-solid fa-door-open"></i>
+            </div>
+
+            <div>
+              <h3 style="font-size:18px; margin-bottom:4px;">Outpass Requests</h3>
+              <p style="color:var(--text-muted); font-size:12.5px;" id="outpassCount">Loading...</p>
+            </div>
+
+            <i class="fa-solid fa-chevron-right" style="margin-left:auto; color:var(--grey-light);"></i>
+          </a>
+
+          <!-- LEAVE -->
+          <a href="leave-requests.html" class="card" style="
+            padding:24px;
+            display:flex;
+            align-items:center;
+            gap:18px;
+            text-decoration:none;
+          ">
+            <div class="stat-icon amber" style="
+              width:56px;
+              height:56px;
+              font-size:22px;
+            ">
+              <i class="fa-solid fa-calendar-days"></i>
+            </div>
+
+            <div>
+              <h3 style="font-size:18px; margin-bottom:4px;">Leave Requests</h3>
+              <p style="color:var(--text-muted); font-size:12.5px;" id="leaveCount">Loading...</p>
+            </div>
+
+            <i class="fa-solid fa-chevron-right" style="margin-left:auto; color:var(--grey-light);"></i>
+          </a>
+
+          <!-- REGISTRATIONS -->
+          <a href="registration-requests.html" class="card" style="
+            padding:24px;
+            display:flex;
+            align-items:center;
+            gap:18px;
+            text-decoration:none;
+          ">
+            <div class="stat-icon green" style="
+              width:56px;
+              height:56px;
+              font-size:22px;
+            ">
+              <i class="fa-solid fa-user-plus"></i>
+            </div>
+
+            <div>
+              <h3 style="font-size:18px; margin-bottom:4px;">Registration Requests</h3>
+              <p style="color:var(--text-muted); font-size:12.5px;" id="regCount">Loading...</p>
+            </div>
+
+            <i class="fa-solid fa-chevron-right" style="margin-left:auto; color:var(--grey-light);"></i>
+          </a>
+
+        </div>
+
+        <!-- ALL PENDING REQUESTS -->
+        <div class="card panel">
+          <div class="panel-title">
+            <span>All Pending Requests</span>
+          </div>
+
+          <div id="allPendingList">
+            <div class="empty-state">
+              <i class="fa-solid fa-spinner fa-spin"></i>
+              <h4>Loading requests...</h4>
+              <p>Please wait while pending requests are loaded from the database.</p>
+            </div>
+          </div>
+        </div>
+
+      </main>
+
+    </div>
+
+  </div>
+
+  <!-- EXISTING JS FILES -->
+  <script src="students.js"></script>
+  <script src="registrations.js"></script>
+  <script src="warden_dashboard.js"></script>
+
+  <script>
+    initShell("pending", {
+      showSearch: false
+    });
+
+    const API_BASE = (window.location.port === "3000") ? "" : "http://localhost:3000";
+
+    function getInitials(name) {
+      if (!name) return "?";
+      return name
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map(word => word.charAt(0).toUpperCase())
+        .join("");
+    }
+
+    function escapeHTML(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    async function loadPendingRequests() {
+      const outpassCount = document.getElementById("outpassCount");
+      const leaveCount = document.getElementById("leaveCount");
+      const regCount = document.getElementById("regCount");
+      const allPendingList = document.getElementById("allPendingList");
+
+      try {
+        const [outpassRes, leaveRes, regRes] = await Promise.all([
+          fetch(`${API_BASE}/api/outpass/pending`).then(r => r.json()).catch(() => ({ outpasses: [] })),
+          fetch(`${API_BASE}/api/leave/pending`).then(r => r.json()).catch(() => ({ leaves: [] })),
+          fetch(`${API_BASE}/api/registrations`).then(r => r.json()).catch(() => ({ students: [] }))
+        ]);
+
+        const outpasses = (outpassRes.success && Array.isArray(outpassRes.outpasses)) ? outpassRes.outpasses : [];
+        const leaves = (leaveRes.success && Array.isArray(leaveRes.leaves)) ? leaveRes.leaves : [];
+        const pendingRegs = ((regRes.students || []).filter(r => String(r.status).toLowerCase() === "pending"));
+
+        if (outpassCount) outpassCount.textContent = `${outpasses.length} awaiting approval`;
+        if (leaveCount) leaveCount.textContent = `${leaves.length} awaiting approval`;
+        if (regCount) regCount.textContent = `${pendingRegs.length} awaiting approval`;
+
+        const outpassItems = outpasses.map(o => ({
+          type: "Outpass",
+          name: o.name || "Unknown Student",
+          roll: o.roll_no || o.student_id || "",
+          room: o.room_no || "Not Allocated",
+          description: o.purpose || "Outpass request",
+          date: o.out_date || o.created_at,
+          time: o.out_time || "",
+          id: o.id,
+          link: "outpass-requests.html"
+        }));
+
+        const leaveItems = leaves.map(l => ({
+          type: "Leave",
+          name: l.name || l.full_name || "Unknown Student",
+          roll: l.roll_no || l.student_id || "",
+          room: l.room_no || "Not Allocated",
+          description: l.reason || l.purpose || "Leave request",
+          date: l.from_date || l.start_date || l.created_at,
+          time: "",
+          id: l.id,
+          link: "leave-requests.html"
+        }));
+
+        const regItems = pendingRegs.map(r => ({
+          type: "Registration",
+          name: r.full_name || r.name || "Unknown Student",
+          roll: r.roll_no || r.admission_no || "",
+          room: r.room_no || "Not Allocated",
+          description: `${r.department || ""} ${r.year || ""}`.trim() || "New Registration",
+          date: r.created_at || "",
+          time: "",
+          id: r.admission_no,
+          link: "registration-requests.html"
+        }));
+
+        const allPending = [...outpassItems, ...leaveItems, ...regItems];
+
+        allPending.sort((a, b) => {
+          const dateA = new Date(`${a.date || ""} ${a.time || ""}`);
+          const dateB = new Date(`${b.date || ""} ${b.time || ""}`);
+          const timeA = isNaN(dateA.getTime()) ? 0 : dateA.getTime();
+          const timeB = isNaN(dateB.getTime()) ? 0 : dateB.getTime();
+          return timeB - timeA;
+        });
+
+        if (!allPendingList) return;
+
+        if (allPending.length === 0) {
+          allPendingList.innerHTML = `
+          <div class="empty-state">
+            <i class="fa-solid fa-clipboard-check"></i>
+            <h4>Nothing pending</h4>
+            <p>All outpass, leave, and registration requests have been reviewed.</p>
+          </div>
+        `;
+          return;
+        }
+
+        allPendingList.innerHTML = allPending.map(request => `
+        <div class="mini-list-item">
+          <div class="mini-avatar">
+            ${getInitials(request.name)}
+          </div>
+          <div class="mini-info">
+            <h4>
+              ${escapeHTML(request.name)}
+              <span style="font-weight:400; color:var(--text-muted);">· ${request.type}</span>
+            </h4>
+            <p>
+              ${escapeHTML(request.roll)}
+              ${request.room ? `· Room ${escapeHTML(request.room)}` : ""}
+              ${request.description ? `· ${escapeHTML(request.description)}` : ""}
+            </p>
+          </div>
+          <a href="${request.link}" class="btn btn-outline btn-sm">Review</a>
+        </div>
+      `).join("");
+
+      } catch (error) {
+        console.error("Failed to load pending requests:", error);
+        if (outpassCount) outpassCount.textContent = "Unable to load";
+        if (leaveCount) leaveCount.textContent = "Unable to load";
+        if (regCount) regCount.textContent = "Unable to load";
+        if (allPendingList) {
+          allPendingList.innerHTML = `
+          <div class="empty-state">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <h4>Unable to load requests</h4>
+            <p>Please make sure the backend server is running.</p>
+          </div>
+        `;
+        }
+      }
+    }
+
+    loadPendingRequests();
+  </script>
+
+</body>
+
+</html>

@@ -1,0 +1,6 @@
+admin_id,full_name,designation,shift,email,phone_no,password,status,created_at
+ADM101,Anitha Kumar,Hostel Superintendent,General (9 AM – 5 PM),adm101@amjaincollege.edu,9000020001,$2b$10$IuURe9vKK1mZ2wPzbfdmI./CTotyGjSh8W8/JqOsiAwImGAFKSewG,Active,8/9/2026
+ADM102,Bharath Raj,Deputy Administrator,General (9 AM – 5 PM),adm102@amjaincollege.edu,9000020002,$2b$10$FUSdFARqcK6waCjdJAX5M.vVpKgIFCw89px72lsuJzhH2ZIF5K21m,Active,8/9/2026
+ADM103,Charan Das,Chief Administrator,General (9 AM – 5 PM),adm103@amjaincollege.edu,9000020003,$2b$10$9VMx5KbjfwTd4EsgwkDIU.ED7/uKYp/qGH5T5yvP4PL9CLtDNk39i,Active,8/9/2026
+ADM104,Deepa Priya,Accounts Officer,General (9 AM – 5 PM),adm104@amjaincollege.edu,9000020004,$2b$10$eBc6KRE7AElG83bChygUC.hD6028jJ58kIA4SIPAURUhrFewmngDq,Active,8/9/2026
+ADM105,Ezhil Kumar,Office Assistant,General (9 AM – 5 PM),adm105@amjaincollege.edu,9000020005,$2b$10$WBt2VKW0Ry65cD5ves9cJOadAOM4dgJGlVRmfIvIdEYJ/HvBZnJn6,Active,8/9/2026

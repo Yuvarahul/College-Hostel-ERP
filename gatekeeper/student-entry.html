@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Entry | GateKeeper</title>
+<link rel="stylesheet" href="gatekeeper-style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="topbar-root"></div>
+
+      <main class="page">
+        <div class="breadcrumb"><a href="dashboard.html">Dashboard</a> <i class="fa-solid fa-chevron-right"></i> Student Entry</div>
+        <div class="page-header">
+          <h2>Student Entry</h2>
+          <p>Look up a student by roll number or name, then log them in at the gate.</p>
+        </div>
+
+        <div class="card panel lookup-panel">
+          <div class="form-group">
+            <label for="lookupInput">Roll Number / Name</label>
+            <div class="search-box" style="background:var(--grey-bg); width:100%;">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="lookupInput" placeholder="e.g. HST20260143 or Priya Sharma">
+            </div>
+          </div>
+          <button class="btn btn-primary btn-block" id="lookupBtn"><i class="fa-solid fa-magnifying-glass"></i> Look Up Student</button>
+
+          <div class="lookup-result" id="lookupResult"></div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+<script src="gatekeeper-auth-adapter.js"></script>
+<script src="gatekeeper-data.js"></script>
+<script src="gatekeeper.js"></script>
+<script>
+  const session = requireAuth();
+  if (session) {
+    initShell("student-entry", { showSearch: false });
+
+    const lookupInput = document.getElementById("lookupInput");
+    const lookupBtn = document.getElementById("lookupBtn");
+    const resultBox = document.getElementById("lookupResult");
+    let currentStudent = null;
+
+    function doLookup() {
+      const q = lookupInput.value.trim();
+      if (!q) { showToast("warning", "Enter a value", "Type a roll number or name to search."); return; }
+      currentStudent = getStudent(q);
+
+      if (!currentStudent) {
+        resultBox.innerHTML = `<div class="empty-state"><i class="fa-solid fa-user-xmark"></i><h4>No matching student</h4><p>Check the roll number or try a different name.</p></div>`;
+        return;
+      }
+
+      const status = getStudentCurrentStatus(currentStudent.roll); // "In Hostel" | "Out of Hostel"
+      const alreadyIn = status === "In Hostel";
+
+      resultBox.innerHTML = `
+        <div class="person-summary">
+          <div class="mini-avatar">${initials(currentStudent.name)}</div>
+          <div>
+            <h3>${currentStudent.name}</h3>
+            <p>${currentStudent.roll} · ${currentStudent.dept || "—"} · Room ${currentStudent.room || "—"}, Block ${currentStudent.block || "—"}</p>
+          </div>
+          <span class="status-pill ${alreadyIn ? "in" : "out"}">${alreadyIn ? "Already In" : "Currently Out"}</span>
+        </div>
+        <div class="form-group">
+          <label for="remarksInput">Remarks (optional)</label>
+          <textarea id="remarksInput" rows="2" placeholder="e.g. Returned from outpass"></textarea>
+        </div>
+        <button class="btn btn-success btn-block" id="confirmEntryBtn" ${alreadyIn ? "disabled" : ""}>
+          <i class="fa-solid fa-right-to-bracket"></i> ${alreadyIn ? "Student Already Inside Campus" : "Confirm Entry"}
+        </button>`;
+
+      const confirmBtn = document.getElementById("confirmEntryBtn");
+      if (confirmBtn && !alreadyIn) {
+        confirmBtn.addEventListener("click", () => {
+          const remarks = document.getElementById("remarksInput").value.trim();
+          addGateLogEntry({
+            personType: "student",
+            personRefId: currentStudent.roll,
+            personRefSource: currentStudent.source && currentStudent.source.startsWith("erp") ? "erp" : "gatekeeper",
+            name: currentStudent.name,
+            identifier: currentStudent.roll,
+            direction: "in",
+            remarks
+          });
+          syncNotifications({ type: "success", text: `${currentStudent.name} (${currentStudent.roll}) entered campus.`, roll: currentStudent.roll });
+          showToast("success", "Entry logged", `${currentStudent.name} marked as IN.`);
+          lookupInput.value = "";
+          resultBox.innerHTML = "";
+          currentStudent = null;
+        });
+      }
+    }
+
+    lookupBtn.addEventListener("click", doLookup);
+    lookupInput.addEventListener("keydown", (e) => { if (e.key === "Enter") doLookup(); });
+  }
+</script>
+</body>
+</html>

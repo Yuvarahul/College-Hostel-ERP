@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gate Logs | GateKeeper</title>
+<link rel="stylesheet" href="gatekeeper-style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="topbar-root"></div>
+
+      <main class="page">
+        <div class="breadcrumb"><a href="dashboard.html">Dashboard</a> <i class="fa-solid fa-chevron-right"></i> Gate Logs</div>
+        <div class="page-header">
+          <h2>Gate Logs</h2>
+          <p>Complete record of students who went OUT and returned IN through the gate.</p>
+        </div>
+
+        <div class="filter-bar">
+          <div class="search-box" style="background:var(--grey-bg);">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="searchInput" placeholder="Search student name or ID...">
+          </div>
+          <select id="typeFilter">
+            <option value="">All Types</option>
+            <option value="outpass">Outpass</option>
+            <option value="leave">Leave</option>
+          </select>
+          <select id="statusFilter">
+            <option value="">All Status</option>
+            <option value="out">Currently Out</option>
+            <option value="in">Returned IN</option>
+          </select>
+          <select id="dateFilter">
+            <option value="">All Dates</option>
+            <option value="today">Today</option>
+            <option value="7days">Last 7 Days</option>
+            <option value="30days">Last 30 Days</option>
+          </select>
+          <span class="result-count" id="resultCount">0 entries</span>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Student Name</th>
+                <th>Type</th>
+                <th>OUT Time</th>
+                <th>IN Time</th>
+                <th>Status</th>
+                <th>Gatekeeper</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="logTableBody"></tbody>
+          </table>
+          <div id="emptyState" style="display:none;"></div>
+        </div>
+
+        <div class="pagination" id="pagination"></div>
+      </main>
+    </div>
+  </div>
+
+<script src="gatekeeper-auth-adapter.js"></script>
+<script src="gatekeeper-data.js"></script>
+<script src="gatekeeper.js"></script>
+<script>
+  const session = requireAuth();
+  if (session) {
+    initShell("gate-logs", { showSearch: false });
+
+    const API_BASE = (window.location.port === "3000") ? "" : "http://localhost:3000";
+    const PER_PAGE = 12;
+    let currentPage = 1;
+    let allMovements = [];
+
+    const searchInput = document.getElementById("searchInput");
+    const typeFilter = document.getElementById("typeFilter");
+    const statusFilter = document.getElementById("statusFilter");
+    const dateFilter = document.getElementById("dateFilter");
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("type")) typeFilter.value = params.get("type");
+    if (params.get("filter") === "today") dateFilter.value = "today";
+
+    function fmtTime(value) {
+      if (!value) return "—";
+      return String(value);
+    }
+
+    function prettyType(value) {
+      return String(value || "").toLowerCase() === "outpass" ? "Outpass" : "Leave";
+    }
+
+    function withinDateFilter(outDate, filter) {
+      if (!filter || !outDate) return true;
+      const now = new Date();
+      const t = new Date(outDate + "T00:00:00");
+      if (Number.isNaN(t.getTime())) return true;
+      const diff = now - t;
+      if (filter === "today") return t.toDateString() === now.toDateString();
+      if (filter === "7days") return diff >= 0 && diff <= 7 * 24 * 60 * 60 * 1000;
+      if (filter === "30days") return diff >= 0 && diff <= 30 * 24 * 60 * 60 * 1000;
+      return true;
+    }
+
+    function getFiltered() {
+      const q = searchInput.value.trim().toLowerCase();
+      const type = typeFilter.value;
+      const status = statusFilter.value;
+      const date = dateFilter.value;
+
+      return allMovements.filter(m => {
+        if (q && !(
+          String(m.name || "").toLowerCase().includes(q) ||
+          String(m.roll_no || "").toLowerCase().includes(q) ||
+          String(m.student_id || "").toLowerCase().includes(q)
+        )) return false;
+        if (type && String(m.request_type || "").toLowerCase() !== type) return false;
+        if (status && String(m.status || "").toLowerCase() !== status) return false;
+        if (!withinDateFilter(m.out_date, date)) return false;
+        return true;
+      });
+    }
+
+    async function loadMovements() {
+      const tbody = document.getElementById("logTableBody");
+      const emptyState = document.getElementById("emptyState");
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:35px;">Loading gate logs...</td></tr>`;
+      emptyState.style.display = "none";
+
+      try {
+        const res = await fetch(`${API_BASE}/api/gatekeeper/history`);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) throw new Error(data.message || "Failed to load gate logs");
+        allMovements = Array.isArray(data.movements) ? data.movements : [];
+        currentPage = 1;
+        render();
+      } catch (error) {
+        allMovements = [];
+        tbody.innerHTML = "";
+        emptyState.style.display = "block";
+        emptyState.innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i><h4>Could not load gate logs</h4><p>${error.message || "Make sure node server.js is running."}</p></div>`;
+        document.getElementById("resultCount").textContent = "0 entries";
+        document.getElementById("pagination").innerHTML = "";
+      }
+    }
+
+    function render() {
+      const filtered = getFiltered();
+      document.getElementById("resultCount").textContent = `${filtered.length} entr${filtered.length !== 1 ? "ies" : "y"}`;
+      const tbody = document.getElementById("logTableBody");
+      const emptyState = document.getElementById("emptyState");
+      const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = "";
+        emptyState.style.display = "block";
+        emptyState.innerHTML = `<div class="empty-state"><i class="fa-solid fa-clipboard-list"></i><h4>No gate log entries found</h4><p>Students will appear here after their QR OUT scan.</p></div>`;
+        document.getElementById("pagination").innerHTML = "";
+        return;
+      }
+      emptyState.style.display = "none";
+
+      const pageItems = paginate(filtered, currentPage, PER_PAGE);
+      tbody.innerHTML = pageItems.map(m => {
+        const isOut = String(m.status || "").toUpperCase() === "OUT";
+        return `
+        <tr>
+          <td class="person-cell">
+            <div class="mini-avatar">${initials(m.name || "??")}</div>
+            <div>
+              <div class="p-name">${m.name || "—"}</div>
+              <div class="p-sub">${m.roll_no || m.student_id || ""}</div>
+            </div>
+          </td>
+          <td><span style="text-transform:capitalize;">${prettyType(m.request_type)}</span></td>
+          <td><strong>${fmtTime(m.out_time)}</strong><div class="p-sub">${m.out_date || ""}</div></td>
+          <td><strong>${fmtTime(m.in_time)}</strong></td>
+          <td>${isOut ? '<span class="badge badge-pending"><i></i>OUT</span>' : '<span class="badge badge-approved"><i></i>IN</span>'}</td>
+          <td>${m.gatekeeper_out_name || m.gatekeeper_in_name || "—"}</td>
+          <td class="action-cell">
+            <button class="btn btn-ghost btn-sm view-btn" data-id="${m.movement_id}"><i class="fa-solid fa-eye"></i></button>
+          </td>
+        </tr>`;
+      }).join("");
+
+      tbody.querySelectorAll(".view-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const entry = allMovements.find(x => String(x.movement_id) === String(btn.dataset.id));
+          if (!entry) return;
+          openDetailsModal({
+            title: "Student Gate Movement",
+            bodyHtml: `
+              <div class="detail-grid">
+                <div class="d-item"><span>Student Name</span><p>${entry.name || "—"}</p></div>
+                <div class="d-item"><span>Roll Number</span><p>${entry.roll_no || "—"}</p></div>
+                <div class="d-item"><span>Type</span><p>${prettyType(entry.request_type)}</p></div>
+                <div class="d-item"><span>OUT Date</span><p>${entry.out_date || "—"}</p></div>
+                <div class="d-item"><span>OUT Time</span><p>${fmtTime(entry.out_time)}</p></div>
+                <div class="d-item"><span>IN Time</span><p>${fmtTime(entry.in_time)}</p></div>
+                <div class="d-item"><span>Status</span><p>${String(entry.status || "").toUpperCase()}</p></div>
+                <div class="d-item"><span>OUT Gatekeeper</span><p>${entry.gatekeeper_out_name || "—"}</p></div>
+                <div class="d-item"><span>IN Gatekeeper</span><p>${entry.gatekeeper_in_name || "—"}</p></div>
+                <div class="d-item"><span>Expected Return</span><p>${entry.expected_return || "—"}</p></div>
+              </div>`
+          });
+        });
+      });
+
+      buildPagination(document.getElementById("pagination"), filtered.length, PER_PAGE, currentPage, (p) => { currentPage = p; render(); });
+    }
+
+    [searchInput].forEach(el => el.addEventListener("input", () => { currentPage = 1; render(); }));
+    [typeFilter, statusFilter, dateFilter].forEach(el => el.addEventListener("change", () => { currentPage = 1; render(); }));
+
+    loadMovements();
+  }
+</script>
+</body>
+</html>

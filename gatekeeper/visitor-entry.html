@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visitor Entry | GateKeeper</title>
+<link rel="stylesheet" href="gatekeeper-style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="topbar-root"></div>
+
+      <main class="page">
+        <div class="breadcrumb"><a href="dashboard.html">Dashboard</a> <i class="fa-solid fa-chevron-right"></i> Visitor Entry</div>
+        <div class="page-header">
+          <h2>Visitor Entry</h2>
+          <p>Record a new visitor's details and ID proof before allowing them onto campus.</p>
+        </div>
+
+        <div class="card panel" style="max-width:640px; margin:0 auto;">
+          <form id="visitorForm">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="vName">Visitor Name *</label>
+                <input type="text" id="vName" placeholder="Full name" required>
+              </div>
+              <div class="form-group">
+                <label for="vPhone">Phone Number *</label>
+                <input type="tel" id="vPhone" placeholder="10-digit mobile number" required>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="vIdType">ID Proof Type *</label>
+                <select id="vIdType" required>
+                  <option value="">Select ID type</option>
+                  <option>Aadhaar Card</option>
+                  <option>Driving License</option>
+                  <option>Voter ID</option>
+                  <option>Passport</option>
+                  <option>College ID Card</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="vIdNumber">ID Proof Number *</label>
+                <input type="text" id="vIdNumber" placeholder="ID number" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="vPurpose">Purpose of Visit *</label>
+              <select id="vPurpose" required>
+                <option value="">Select purpose</option>
+                <option>Meeting Student</option>
+                <option>Meeting Staff</option>
+                <option>Delivery</option>
+                <option>Maintenance / Vendor</option>
+                <option>Official Visit</option>
+                <option>Other</option>
+              </select>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="vHostName">Person Being Visited</label>
+                <input type="text" id="vHostName" placeholder="Name (optional)">
+              </div>
+              <div class="form-group">
+                <label for="vHostRoll">Host Roll No. / Staff ID</label>
+                <input type="text" id="vHostRoll" placeholder="e.g. HST20260143 (optional)">
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-success btn-block"><i class="fa-solid fa-user-plus"></i> Log Visitor Entry</button>
+          </form>
+        </div>
+      </main>
+    </div>
+  </div>
+
+<script src="gatekeeper-auth-adapter.js"></script>
+<script src="gatekeeper-data.js"></script>
+<script src="gatekeeper.js"></script>
+<script>
+  const session = requireAuth();
+  if (session) {
+    initShell("visitor-entry", { showSearch: false });
+
+    document.getElementById("visitorForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = document.getElementById("vName").value.trim();
+      const phone = document.getElementById("vPhone").value.trim();
+      const idProofType = document.getElementById("vIdType").value;
+      const idProofNumber = document.getElementById("vIdNumber").value.trim();
+      const purpose = document.getElementById("vPurpose").value;
+      const hostName = document.getElementById("vHostName").value.trim();
+      const hostRefRoll = document.getElementById("vHostRoll").value.trim();
+
+      if (!name || !phone || !idProofType || !idProofNumber || !purpose) {
+        showToast("warning", "Missing details", "Please fill in all required fields.");
+        return;
+      }
+      if (!/^\d{10}$/.test(phone)) {
+        showToast("warning", "Invalid phone number", "Enter a valid 10-digit phone number.");
+        return;
+      }
+
+      const visitor = addVisitorEntry({ name, phone, idProofType, idProofNumber, purpose, hostName, hostRefRoll });
+      showToast("success", "Visitor logged", `${visitor.name} recorded as ON CAMPUS.`);
+      e.target.reset();
+    });
+  }
+</script>
+</body>
+</html>

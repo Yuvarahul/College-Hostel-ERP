@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apply Outpass</title>
+
+    <link rel="stylesheet" href="dashboard.css">
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+<div class="main-content">
+
+    <div class="welcome">
+        <h2>Apply Outpass</h2>
+        <p>Fill in the details to request an outpass.</p>
+    </div>
+
+    <div class="card">
+
+        <div class="form-alert" id="outpassAlert"></div>
+
+        <label>Student Name</label>
+        <input
+            type="text"
+            class="textbox"
+            id="outpassStudentName"
+            placeholder="Enter your name"
+        >
+
+        <br><br>
+
+        <label>Roll Number</label>
+        <input
+            type="text"
+            class="textbox"
+            id="outpassRollNumber"
+            placeholder="Enter Roll Number"
+        >
+
+        <br><br>
+
+        <label>Room Number</label>
+        <input
+            type="text"
+            class="textbox"
+            id="outpassRoomNumber"
+            placeholder="Enter Room Number"
+        >
+
+        <br><br>
+
+        <!-- Outpass Date - Automatically set to today's date -->
+        <label for="fromDate">Date</label>
+        <input
+            type="date"
+            class="textbox"
+            id="fromDate"
+            required
+            readonly
+        >
+
+        <br><br>
+
+        <!-- Out Time - Student manually selects -->
+        <label for="outTime">Out Time</label>
+        <input
+            type="time"
+            class="textbox"
+            id="outTime"
+            required
+        >
+
+        <br><br>
+
+        <!-- Expected Return Time - Student manually selects -->
+        <label for="returnTime">Expected Return Time</label>
+        <input
+            type="time"
+            class="textbox"
+            id="returnTime"
+            required
+        >
+
+        <br><br>
+
+        <label>Purpose</label>
+        <textarea
+            class="textbox"
+            id="outpassPurpose"
+            rows="5"
+            placeholder="Reason for Outpass"
+        ></textarea>
+
+        <br><br>
+
+        <div class="form-group">
+            <label for="proof">Upload Proof</label><br>
+
+            <input
+                type="file"
+                id="proof"
+                name="proof"
+                accept=".jpg,.jpeg,.png,.pdf"
+            >
+        </div>
+
+        <br>
+
+        <button type="button" id="outpassSubmitBtn">
+            Submit Outpass
+        </button>
+
+        <a href="dashboard.html" class="back-to-dashboard">
+            &larr; Back to Dashboard
+        </a>
+
+    </div>
+
+</div>
+
+<!-- Automatically set Outpass Date to today's date -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const today = new Date();
+
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+
+    const dateInput = document.getElementById("fromDate");
+
+    if (dateInput) {
+        dateInput.value = `${yyyy}-${mm}-${dd}`;
+    }
+});
+</script>
+
+<script src="students.js"></script>
+<script src="registrations.js"></script>
+<script src="student.js"></script>
+
+</body>
+</html>

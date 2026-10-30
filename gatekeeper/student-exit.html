@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Exit | GateKeeper</title>
+<link rel="stylesheet" href="gatekeeper-style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="topbar-root"></div>
+
+      <main class="page">
+        <div class="breadcrumb"><a href="dashboard.html">Dashboard</a> <i class="fa-solid fa-chevron-right"></i> Student Exit</div>
+        <div class="page-header">
+          <h2>Student Exit</h2>
+          <p>Look up a student, check their outpass status, and log them out at the gate.</p>
+        </div>
+
+        <div class="card panel lookup-panel">
+          <div class="form-group">
+            <label for="lookupInput">Roll Number / Name</label>
+            <div class="search-box" style="background:var(--grey-bg); width:100%;">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="lookupInput" placeholder="e.g. HST20260143 or Priya Sharma">
+            </div>
+          </div>
+          <button class="btn btn-primary btn-block" id="lookupBtn"><i class="fa-solid fa-magnifying-glass"></i> Look Up Student</button>
+
+          <div class="lookup-result" id="lookupResult"></div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+<script src="gatekeeper-auth-adapter.js"></script>
+<script src="gatekeeper-data.js"></script>
+<script src="gatekeeper.js"></script>
+<script>
+  const session = requireAuth();
+  if (session) {
+    initShell("student-exit", { showSearch: false });
+
+    const lookupInput = document.getElementById("lookupInput");
+    const lookupBtn = document.getElementById("lookupBtn");
+    const resultBox = document.getElementById("lookupResult");
+    let currentStudent = null;
+
+    function outpassBanner(outpass) {
+      if (!outpass) {
+        return `<div class="empty-state" style="padding:16px;"><i class="fa-solid fa-file-circle-question" style="font-size:24px;"></i><p style="margin-top:6px;">No outpass/leave record found for this student. Verify manually before allowing exit.</p></div>`;
+      }
+      const cls = outpass.valid ? "badge-approved" : "badge-rejected";
+      return `
+        <div class="form-group" style="background:var(--grey-bg); border-radius:var(--radius-sm); padding:14px;">
+          <span class="badge ${cls}"><i></i>${outpass.valid ? "Valid Outpass Window" : "No Active/Valid Window"}</span>
+          <p style="font-size:12px; color:var(--text-muted); margin-top:8px;">
+            Type: ${outpass.requestType || "—"} · Status: ${outpass.status || "—"}<br>
+            Window: ${fmtDateTime(outpass.validFrom)} → ${fmtDateTime(outpass.validTo)}
+          </p>
+        </div>`;
+    }
+
+    function doLookup() {
+      const q = lookupInput.value.trim();
+      if (!q) { showToast("warning", "Enter a value", "Type a roll number or name to search."); return; }
+      currentStudent = getStudent(q);
+
+      if (!currentStudent) {
+        resultBox.innerHTML = `<div class="empty-state"><i class="fa-solid fa-user-xmark"></i><h4>No matching student</h4><p>Check the roll number or try a different name.</p></div>`;
+        return;
+      }
+
+      const status = getStudentCurrentStatus(currentStudent.roll);
+      const alreadyOut = status === "Out of Hostel";
+      const outpass = verifyOutpass(currentStudent.roll);
+
+      resultBox.innerHTML = `
+        <div class="person-summary">
+          <div class="mini-avatar">${initials(currentStudent.name)}</div>
+          <div>
+            <h3>${currentStudent.name}</h3>
+            <p>${currentStudent.roll} · ${currentStudent.dept || "—"} · Room ${currentStudent.room || "—"}, Block ${currentStudent.block || "—"}</p>
+          </div>
+          <span class="status-pill ${alreadyOut ? "out" : "in"}">${alreadyOut ? "Already Out" : "Currently In"}</span>
+        </div>
+        ${outpassBanner(outpass)}
+        <div class="form-group" style="margin-top:14px;">
+          <label for="remarksInput">Remarks (optional)</label>
+          <textarea id="remarksInput" rows="2" placeholder="e.g. Going home for weekend"></textarea>
+        </div>
+        <button class="btn btn-danger btn-block" id="confirmExitBtn" ${alreadyOut ? "disabled" : ""}>
+          <i class="fa-solid fa-right-from-bracket"></i> ${alreadyOut ? "Student Already Outside Campus" : "Confirm Exit"}
+        </button>`;
+
+      const confirmBtn = document.getElementById("confirmExitBtn");
+      if (confirmBtn && !alreadyOut) {
+        confirmBtn.addEventListener("click", () => {
+          const remarks = document.getElementById("remarksInput").value.trim();
+          addGateLogEntry({
+            personType: "student",
+            personRefId: currentStudent.roll,
+            personRefSource: currentStudent.source && currentStudent.source.startsWith("erp") ? "erp" : "gatekeeper",
+            name: currentStudent.name,
+            identifier: currentStudent.roll,
+            direction: "out",
+            remarks
+          });
+          syncNotifications({ type: "info", text: `${currentStudent.name} (${currentStudent.roll}) exited campus.`, roll: currentStudent.roll });
+          showToast("success", "Exit logged", `${currentStudent.name} marked as OUT.`);
+          lookupInput.value = "";
+          resultBox.innerHTML = "";
+          currentStudent = null;
+        });
+      }
+    }
+
+    lookupBtn.addEventListener("click", doLookup);
+    lookupInput.addEventListener("keydown", (e) => { if (e.key === "Enter") doLookup(); });
+  }
+</script>
+</body>
+</html>

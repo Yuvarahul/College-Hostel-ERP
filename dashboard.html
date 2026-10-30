@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Student Dashboard</title>
+
+<link rel="stylesheet" href="dashboard.css">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+</head>
+
+<body>
+
+<!-- Top Navbar -->
+
+<div class="topbar">
+
+<div class="logo">
+<i class="fa-solid fa-user-graduate"></i>
+Student Portal
+</div>
+
+<div class="top-icons">
+
+    <i class="fa-solid fa-bell"
+       onclick="openNotification()"
+       title="Notifications"></i>
+
+    <img src="students.jpg"
+         class="profile-pic"
+         onclick="openProfile()"
+         title="My Profile">
+
+</div>
+
+</div>
+
+<!-- College Banner -->
+
+<div class="college-banner">
+
+<img src="college-banner.png" alt="College Banner">
+
+</div>
+
+<!-- Dashboard -->
+
+<div class="container">
+
+<!-- Sidebar -->
+
+<div class="sidebar">
+
+<h3>MENU</h3>
+
+<a href="#"><i class="fa-solid fa-house"></i> Dashboard</a>
+
+<a href="outpass.html"><i class="fa-solid fa-door-open"></i> Apply Outpass</a>
+
+<a href="leaveform.html"><i class="fa-solid fa-file-circle-check"></i> Apply Leave</a>
+
+<a href="my-profile.html"><i class="fa-solid fa-user"></i> My Profile</a>
+
+<a href="my-notifications.html"><i class="fa-solid fa-bell"></i> Notifications <span class="nav-badge" id="studentNotifBadge" style="display:none;"></span></a>
+
+
+<a href="history.html"><i class="fa-solid fa-clock-rotate-left"></i> Entry History</a>
+
+<a href="#" class="logout"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+
+</div>
+
+<!-- Main -->
+
+<div class="main-content">
+
+<div class="welcome">
+
+<h1 id="studentWelcomeName">Welcome 👋</h1>
+<h4 id="studentWelcomeRole">Hosteller</h4>
+
+</div>
+
+<div class="info-banner" id="roomInfoBanner" style="display:none;"></div>
+<div class="notif-banner" id="latestNotifBanner" style="display:none;"></div>
+
+<!-- Quick Access -->
+
+<h2 class="title">Quick Access</h2>
+
+<div class="cards">
+
+<div class="card" onclick="openOutpass()">
+    <i class="fa-solid fa-door-open"></i>
+    <h3>Apply Outpass</h3>
+    <p>Generate hostel outpass request.</p>
+</div>
+
+<div class="card" onclick="openLeave()">
+<i class="fa-solid fa-file-circle-check"></i>
+<h3>Apply Leave</h3>
+<p>Apply hostel leave request.</p>
+</div>
+
+
+<div class="card" onclick="openNotification()">
+    <i class="fa-solid fa-bell"></i>
+    <h3>Notifications</h3>
+    <p>Latest announcements.</p>
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<script src="students.js"></script>
+<script src="registrations.js"></script>
+<script src="student.js"></script>
+</body>
+</html>

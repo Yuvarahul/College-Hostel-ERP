@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Outpass / Leave Reports | HostelERP Admin Portal</title>
+<link rel="stylesheet" href="warden_dashboard.css">
+<link rel="stylesheet" href="admin-section.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+<div class="app-shell">
+  <div id="sidebar-root"></div>
+
+  <div class="main-content">
+    <div id="topbar-root"></div>
+
+    <main class="page">
+      <div class="breadcrumb">
+        <a href="admin-dashboard.html">Dashboard</a>
+        <i class="fa-solid fa-chevron-right"></i> Outpass / Leave Reports
+      </div>
+
+      <div class="greeting-banner">
+        <div>
+          <h2 id="pageTitle">Outpass / Leave Reports</h2>
+          <p>Approved and rejected outpass and leave requests, filterable by date, type and status.</p>
+        </div>
+        <i class="fa-solid fa-chart-column greet-icon" id="pageIcon"></i>
+      </div>
+
+      <div class="admin-stat-strip" id="statStrip" style="display:none"></div>
+
+      <!-- Outpass / Leave approved and rejected report -->
+      <section class="card panel" id="reportPanel" style="display:none">
+        <div class="panel-title">
+          <span>Outpass &amp; Leave Report</span>
+          <button class="btn-primary" id="reportExport"><i class="fa-solid fa-download"></i> Export CSV</button>
+        </div>
+
+        <div class="filter-row">
+          <label class="muted">From <input type="date" id="reportFrom"></label>
+          <label class="muted">To <input type="date" id="reportTo"></label>
+          <select id="reportType">
+            <option value="all">Outpass &amp; Leave</option>
+            <option value="outpass">Outpass only</option>
+            <option value="leave">Leave only</option>
+          </select>
+          <select id="reportStatus">
+            <option value="all">Approved &amp; Rejected &amp; Pending</option>
+            <option value="approved">Approved only</option>
+            <option value="rejected">Rejected only</option>
+            <option value="pending">Pending only</option>
+          </select>
+          <button class="btn-primary" id="reportRun"><i class="fa-solid fa-rotate"></i> Generate</button>
+        </div>
+
+        <div class="report-split" id="reportSummary"></div>
+
+        <div class="section-heading">Request details <span class="muted" id="reportCount"></span></div>
+        <div class="table-wrap">
+          <table class="manage-table">
+            <thead>
+              <tr>
+                <th>Type</th><th>Token</th><th>Student</th><th>Roll No</th><th>Room</th>
+                <th>Period</th><th>Reason / Purpose</th><th>Status</th>
+                <th>Decided By</th><th>Decided On</th><th>Rejection Reason</th>
+              </tr>
+            </thead>
+            <tbody id="reportBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Details modal -->
+      <div class="modal" id="modal">
+        <div class="modal-panel">
+          <div class="panel-title">
+            <span id="modalTitle">Details</span>
+            <button class="btn-small" onclick="closeModal()">Close</button>
+          </div>
+          <div id="modalBody"></div>
+        </div>
+      </div>
+
+      <!-- Add / Edit modal -->
+      <div class="modal" id="formModal">
+        <div class="modal-panel">
+          <div class="panel-title">
+            <span id="formTitle">Add Record</span>
+            <button class="btn-small" onclick="closeForm()">Close</button>
+          </div>
+          <form onsubmit="saveRecord(event)">
+            <div class="form-grid" id="formFields"></div>
+            <div style="margin-top:16px"><button class="btn-primary" type="submit">Save</button></div>
+          </form>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script src="js/script.js"></script>
+<script src="warden_dashboard.js"></script>
+<script src="admin-shell.js"></script>
+<script>window.ADMIN_SECTION = "reports";</script>
+<script src="admin-section.js"></script>
+</body>
+</html>

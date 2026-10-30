@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visitor Exit | GateKeeper</title>
+<link rel="stylesheet" href="gatekeeper-style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+    <div class="main-content">
+      <div id="topbar-root"></div>
+
+      <main class="page">
+        <div class="breadcrumb"><a href="dashboard.html">Dashboard</a> <i class="fa-solid fa-chevron-right"></i> Visitor Exit</div>
+        <div class="page-header">
+          <h2>Visitor Exit</h2>
+          <p>Visitors currently checked in on campus — check them out as they leave.</p>
+        </div>
+
+        <div class="filter-bar">
+          <div class="search-box" style="background:var(--grey-bg);">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="searchInput" placeholder="Search by name or phone...">
+          </div>
+          <span class="result-count" id="resultCount">0 visitors</span>
+        </div>
+
+        <div id="visitorCards"></div>
+      </main>
+    </div>
+  </div>
+
+<script src="gatekeeper-auth-adapter.js"></script>
+<script src="gatekeeper-data.js"></script>
+<script src="gatekeeper.js"></script>
+<script>
+  const session = requireAuth();
+  if (session) {
+    initShell("visitor-exit", { showSearch: false });
+
+    const searchInput = document.getElementById("searchInput");
+
+    function render() {
+      const q = searchInput.value.trim().toLowerCase();
+      const visitors = getVisitorsCurrentlyIn().filter(v =>
+        !q || v.name.toLowerCase().includes(q) || v.phone.includes(q)
+      );
+      document.getElementById("resultCount").textContent = `${visitors.length} visitor${visitors.length !== 1 ? "s" : ""}`;
+
+      const container = document.getElementById("visitorCards");
+      if (visitors.length === 0) {
+        container.innerHTML = `<div class="card"><div class="empty-state"><i class="fa-solid fa-people-group"></i><h4>No visitors on campus</h4><p>Everyone currently checked in has already exited.</p></div></div>`;
+        return;
+      }
+
+      container.innerHTML = `<div class="table-wrap"><table class="data-table">
+        <thead><tr><th>Visitor</th><th>Phone</th><th>Purpose</th><th>Visiting</th><th>Entry Time</th><th>Actions</th></tr></thead>
+        <tbody>${visitors.map(v => `
+          <tr>
+            <td class="person-cell"><div class="mini-avatar">${initials(v.name)}</div><div><div class="p-name">${v.name}</div><div class="p-sub">${v.idProofType}: ${v.idProofNumber}</div></div></td>
+            <td>${v.phone}</td>
+            <td>${v.purpose}</td>
+            <td>${v.hostName || "—"}${v.hostRefRoll ? ` (${v.hostRefRoll})` : ""}</td>
+            <td>${fmtDateTime(v.entryTime)}</td>
+            <td class="action-cell">
+              <button class="btn btn-danger btn-sm exit-btn" data-id="${v.id}"><i class="fa-solid fa-right-from-bracket"></i> Check Out</button>
+            </td>
+          </tr>`).join("")}</tbody>
+      </table></div>`;
+
+      container.querySelectorAll(".exit-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const id = parseInt(btn.dataset.id, 10);
+          const visitor = getVisitors().find(v => v.id === id);
+          openConfirmModal({
+            title: "Check out visitor?",
+            message: `Confirm that ${visitor.name} is exiting campus now.`,
+            confirmLabel: "Confirm Exit",
+            confirmClass: "btn-danger",
+            onConfirm: () => {
+              closeVisitorExit(id);
+              showToast("success", "Visitor checked out", `${visitor.name} has exited campus.`);
+              render();
+            }
+          });
+        });
+      });
+    }
+
+    searchInput.addEventListener("input", render);
+    render();
+  }
+</script>
+</body>
+</html>

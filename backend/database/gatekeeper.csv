@@ -1,0 +1,6 @@
+gatekeeper_id,full_name,role,shift,phone_no,gate,password,status,created_at
+SEC101,Gokul Raj,Security Staff,Day Shift (6:00 AM – 6:00 PM),9000010101,Main Gate,$2b$10$BHnERobnrZW.2tk1wUk7mesuKe/TvTe5Qdb3nhYEbuk7WpktE7nw6,Active,8/9/2026
+SEC102,Hari Kumar,Security Staff,Night Shift (6:00 PM – 6:00 AM),9000010102,Main Gate,$2b$10$Flol8R2HUTh3vVuJuZJ.V.c4XuJEqDmIkWHLr2BbsdHif3JEjggue,Active,8/9/2026
+SEC103,Imran Ali,Security Staff,Day Shift (6:00 AM – 6:00 PM),9000010103,Back Gate,$2b$10$iThoalDvBa5bCaZ5jk1xq.9DZAosS9CoY3u5hRRJglzRnFXLuChK6,Active,8/9/2026
+SEC104,Manoj Kumar,Security Staff,Night Shift (6:00 PM – 6:00 AM),9000010104,Back Gate,$2b$10$vaMf9FhVJ3ZbDlhA.gbgseCb.X2pjXsblg.mFYNGqJohe40lYJaUC,Active,8/9/2026
+SEC105,Naveen Raj,Supervisor,General Shift,9000010105,All Gates,$2b$10$mI6tlNXPePudBDMM2x8MeO.2T7QSloaiJ3acx/K2BvU7PG0RoIFti,Active,8/9/2026

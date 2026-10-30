@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Profile | HostelERP Warden Portal</title>
+  <link rel="stylesheet" href="warden_dashboard.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    .form-row {
+      margin-bottom: 14px;
+    }
+
+    .form-row label {
+      display: block;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-bottom: 6px;
+    }
+
+    .form-row select,
+    .form-row input,
+    .form-row textarea {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      border: 1.5px solid rgba(11, 61, 145, 0.12);
+      background: var(--white);
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 13px;
+    }
+
+    .form-row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+
+    <div class="main-content">
+      <div id="topbar-root"></div>
+
+      <main class="page">
+        <div class="breadcrumb"><a href="warden_dashboard.html">Dashboard</a> <i class="fa-solid fa-chevron-right"></i>
+          Profile</div>
+        <div class="page-header">
+          <h2>My Profile</h2>
+          <p>View and manage your warden account details.</p>
+        </div>
+
+        <div class="dashboard-grid" style="grid-template-columns: 340px 1fr;">
+          <div class="card glass-panel panel" style="text-align:center;">
+            <div class="warden-avatar" style="width:90px; height:90px; font-size:30px; margin:0 auto 16px;"
+              id="profileAvatar"></div>
+            <h3 id="profileName" style="font-size:18px; margin-bottom:4px;"></h3>
+            <p style="color:var(--text-muted); font-size:12.5px; margin-bottom:14px;" id="profileDeptSubtitle">Hostel
+              Warden</p>
+            <span class="badge badge-approved" style="margin-bottom:18px; display:inline-flex;"><i></i>Active</span>
+            <button class="btn btn-primary" style="width:100%;" id="editProfileBtn"><i class="fa-solid fa-pen"></i> Edit
+              Profile</button>
+          </div>
+
+          <div class="card panel">
+            <div class="panel-title"><span>Employee Information</span></div>
+            <div class="detail-grid" id="profileDetails"></div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- EDIT PROFILE MODAL -->
+  <div class="modal-overlay" id="editProfileModalOverlay">
+    <div class="modal-box" style="max-width:550px;">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-user-pen"></i> Edit Profile</h3>
+        <button class="modal-close" id="closeEditModalBtn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="editProfileForm">
+          <div class="form-row">
+            <label>Employee ID</label>
+            <input type="text" id="editEmpId" disabled style="background:var(--grey-bg); opacity:0.8;">
+          </div>
+          <div class="form-row-2">
+            <div class="form-row">
+              <label>Full Name</label>
+              <input type="text" id="editFullName" required>
+            </div>
+            <div class="form-row">
+              <label>Email Address</label>
+              <input type="email" id="editEmail" required>
+            </div>
+          </div>
+          <div class="form-row-2">
+            <div class="form-row">
+              <label>Phone Number</label>
+              <input type="tel" id="editPhone" required>
+            </div>
+            <div class="form-row">
+              <label>Shift Timing</label>
+              <select id="editShift">
+                <option value="Shift 1">Shift 1</option>
+                <option value="Shift 2">Shift 2</option>
+                <option value="General Shift">General Shift</option>
+                <option value="Night Shift">Night Shift</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <label>Department / Hostel Block</label>
+            <input type="text" id="editDept" placeholder="e.g. Boys Hostel Block A">
+          </div>
+          <div class="form-row">
+            <label>Address</label>
+            <textarea id="editAddress" rows="2" style="resize:vertical;"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="cancelEditModalBtn">Cancel</button>
+        <button class="btn btn-primary" id="saveProfileBtn"><i class="fa-solid fa-floppy-disk"></i> Save
+          Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="students.js"></script>
+  <script src="registrations.js"></script>
+  <script src="warden_dashboard.js"></script>
+  <script>
+    initShell("profile", { showSearch: false });
+
+    const WARDEN_API = (window.location.port === "3000") ? "" : "http://localhost:3000";
+
+    let wardenData = {
+      empId: WARDEN.empId || "WRD101",
+      name: WARDEN.name || "Arun Kumar",
+      email: WARDEN.email || "arun.warden@amjaincollege.edu",
+      phone: WARDEN.phone || "9000000101",
+      shift: WARDEN.shift || "Shift 1",
+      department: WARDEN.department || "Hostel Administration",
+      hostelBlock: WARDEN.hostelBlock || "All Blocks",
+      address: WARDEN.address || "Chennai",
+      avatarInitials: WARDEN.avatarInitials || "AK"
+    };
+
+    async function callWardenApi(urlPath, options = {}) {
+      const urls = [
+        `${WARDEN_API}/api/wardens${urlPath}`,
+        `${WARDEN_API}/api/warden${urlPath}`,
+        `http://localhost:3000/api/wardens${urlPath}`,
+        `http://localhost:3000/api/warden${urlPath}`,
+        `/api/wardens${urlPath}`,
+        `/api/warden${urlPath}`
+      ];
+
+      let lastError = null;
+      for (const url of [...new Set(urls)]) {
+        try {
+          const res = await fetch(url, options);
+          if (res.status === 404) continue;
+          return res;
+        } catch (e) {
+          lastError = e;
+        }
+      }
+      if (lastError) throw lastError;
+      throw new Error("API endpoint not reachable. Make sure backend server is running on port 3000.");
+    }
+
+    async function loadProfile() {
+      try {
+        const res = await callWardenApi(`/profile/${encodeURIComponent(wardenData.empId)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.warden) {
+            const w = data.warden;
+            wardenData.name = w.full_name || wardenData.name;
+            wardenData.email = w.email || wardenData.email;
+            wardenData.phone = w.phone_no || wardenData.phone;
+            wardenData.shift = w.shift || w.Shift || wardenData.shift;
+            wardenData.department = w.department || wardenData.department;
+            wardenData.address = w.address || wardenData.address;
+            wardenData.avatarInitials = initials(wardenData.name);
+          }
+        }
+      } catch (e) {
+        console.warn("Could not fetch warden profile from backend, using local:", e);
+      }
+      renderProfileView();
+    }
+
+    function renderProfileView() {
+      document.getElementById("profileAvatar").textContent = wardenData.avatarInitials;
+      document.getElementById("profileName").textContent = wardenData.name;
+      document.getElementById("profileDeptSubtitle").textContent = wardenData.department || "Hostel Warden";
+
+      const fields = [
+        { label: "Employee ID", value: wardenData.empId, icon: "fa-id-card" },
+        { label: "Full Name", value: wardenData.name, icon: "fa-user" },
+        { label: "Email Address", value: wardenData.email, icon: "fa-envelope" },
+        { label: "Phone Number", value: wardenData.phone, icon: "fa-phone" },
+        { label: "Shift Timing", value: wardenData.shift, icon: "fa-clock" },
+        { label: "Hostel Block(s)", value: wardenData.department || wardenData.hostelBlock, icon: "fa-building" },
+        { label: "Address", value: wardenData.address || "—", icon: "fa-location-dot" },
+      ];
+
+      document.getElementById("profileDetails").innerHTML = fields.map(f => `
+      <div class="d-item" style="${f.label === 'Address' ? 'grid-column: 1 / -1;' : ''}">
+        <span><i class="fa-solid ${f.icon}"></i> ${f.label}</span>
+        <p>${f.value}</p>
+      </div>`).join("");
+    }
+
+    const modalOverlay = document.getElementById("editProfileModalOverlay");
+    const editBtn = document.getElementById("editProfileBtn");
+    const closeBtn = document.getElementById("closeEditModalBtn");
+    const cancelBtn = document.getElementById("cancelEditModalBtn");
+    const saveBtn = document.getElementById("saveProfileBtn");
+
+    function openEditModal() {
+      document.getElementById("editEmpId").value = wardenData.empId;
+      document.getElementById("editFullName").value = wardenData.name;
+      document.getElementById("editEmail").value = wardenData.email;
+      document.getElementById("editPhone").value = wardenData.phone;
+      document.getElementById("editShift").value = wardenData.shift || "Shift 1";
+      document.getElementById("editDept").value = wardenData.department || "";
+      document.getElementById("editAddress").value = wardenData.address || "";
+      modalOverlay.classList.add("open");
+    }
+
+    function closeEditModal() {
+      modalOverlay.classList.remove("open");
+    }
+
+    editBtn.addEventListener("click", openEditModal);
+    closeBtn.addEventListener("click", closeEditModal);
+    cancelBtn.addEventListener("click", closeEditModal);
+    modalOverlay.addEventListener("click", (e) => { if (e.target === modalOverlay) closeEditModal(); });
+
+    saveBtn.addEventListener("click", async () => {
+      const fullName = document.getElementById("editFullName").value.trim();
+      const email = document.getElementById("editEmail").value.trim();
+      const phone = document.getElementById("editPhone").value.trim();
+      const shift = document.getElementById("editShift").value;
+      const dept = document.getElementById("editDept").value.trim();
+      const address = document.getElementById("editAddress").value.trim();
+
+      if (!fullName || !email || !phone) {
+        showToast("warning", "Missing fields", "Full Name, Email, and Phone are required.");
+        return;
+      }
+
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Saving...`;
+
+      try {
+        const payload = {
+          employee_id: wardenData.empId,
+          full_name: fullName,
+          email: email,
+          phone_no: phone,
+          shift: shift,
+          department: dept,
+          address: address
+        };
+
+        const res = await callWardenApi(`/profile/${encodeURIComponent(wardenData.empId)}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || "Failed to update profile.");
+        }
+
+        wardenData.name = fullName;
+        wardenData.email = email;
+        wardenData.phone = phone;
+        wardenData.shift = shift;
+        wardenData.department = dept;
+        wardenData.address = address;
+        wardenData.avatarInitials = initials(fullName);
+
+        // Update sessionStorage loggedInWarden
+        const currentStored = JSON.parse(sessionStorage.getItem("loggedInWarden") || "{}");
+        currentStored.employee_id = wardenData.empId;
+        currentStored.full_name = fullName;
+        currentStored.email = email;
+        currentStored.phone_no = phone;
+        currentStored.shift = shift;
+        currentStored.department = dept;
+        currentStored.address = address;
+        sessionStorage.setItem("loggedInWarden", JSON.stringify(currentStored));
+
+        // Update global WARDEN reference
+        WARDEN.name = fullName;
+        WARDEN.email = email;
+        WARDEN.phone = phone;
+        WARDEN.shift = shift;
+        WARDEN.department = dept;
+        WARDEN.address = address;
+        WARDEN.avatarInitials = wardenData.avatarInitials;
+
+        // Update topbar chip if present
+        const chipName = document.querySelector(".warden-chip .name");
+        const chipAvatar = document.querySelector(".warden-chip .warden-avatar");
+        if (chipName) chipName.textContent = fullName;
+        if (chipAvatar) chipAvatar.textContent = wardenData.avatarInitials;
+
+        renderProfileView();
+        closeEditModal();
+        showToast("success", "Profile Updated", "Your profile details have been saved to the database.");
+      } catch (err) {
+        console.error("Save profile error:", err);
+        showToast("error", "Update Failed", err.message || "Could not save profile details.");
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> Save Changes`;
+      }
+    });
+
+    loadProfile();
+  </script>
+</body>
+
+</html>

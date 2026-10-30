@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Total Students | HostelERP Warden Portal</title>
+  <link rel="stylesheet" href="warden_dashboard.css">
+  <link rel="stylesheet" href="students.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+
+<body>
+
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+
+    <div class="main-content">
+      <div id="topbar-root"></div>
+
+      <main class="page">
+        <div class="breadcrumb"><a href="warden_dashboard.html">Dashboard</a> <i class="fa-solid fa-chevron-right"></i>
+          Total Students</div>
+        <div class="page-header">
+          <h2>Total Students</h2>
+          <p>Search, filter, and manage every approved student in the hostel.</p>
+        </div>
+
+        <div class="filter-bar">
+          <div class="search-box" style="background:var(--grey-bg);">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="searchInput" placeholder="Search by name or roll number...">
+          </div>
+          <select id="deptFilter">
+            <option value="">All Departments</option>
+          </select>
+          <select id="yearFilter">
+            <option value="">All Years</option>
+            <option value="1st Year">1st Year</option>
+            <option value="2nd Year">2nd Year</option>
+            <option value="3rd Year">3rd Year</option>
+          </select>
+          <span class="result-count" id="resultCount">0 students</span>
+        </div>
+
+        <div class="table-wrap">
+          <table class="student-table">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Roll Number</th>
+                <th>Department</th>
+                <th>Year</th>
+                <th>Room</th>
+                <th>Phone</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="studentTableBody"></tbody>
+          </table>
+          <div id="emptyState" style="display:none;"></div>
+        </div>
+
+        <div class="pagination" id="pagination"></div>
+      </main>
+    </div>
+  </div>
+
+  <script src="students.js"></script>
+  <script src="registrations.js"></script>
+  <script src="warden_dashboard.js"></script>
+  <script>
+    initShell("students", { showSearch: false });
+
+    const PER_PAGE = 10;
+    let currentPage = 1;
+
+    const searchInput = document.getElementById("searchInput");
+    const deptFilter = document.getElementById("deptFilter");
+    const yearFilter = document.getElementById("yearFilter");
+
+    /* Pre-fill from URL params */
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("q")) searchInput.value = params.get("q");
+
+    function getApprovedStudents() {
+      /* Only show students who are registered AND approved by the warden */
+      return getStudents().filter(s => String(s.status).toLowerCase() === "approved");
+    }
+
+    function populateDeptFilter() {
+      const depts = [...new Set(getApprovedStudents().map(s => s.dept))].filter(Boolean).sort();
+      const current = deptFilter.value;
+      deptFilter.innerHTML = '<option value="">All Departments</option>';
+      depts.forEach(d => {
+        const opt = document.createElement("option");
+        opt.value = d;
+        opt.textContent = d;
+        if (d === current) opt.selected = true;
+        deptFilter.appendChild(opt);
+      });
+    }
+
+    function getFiltered() {
+      const q = searchInput.value.trim().toLowerCase();
+      const dept = deptFilter.value;
+      const year = yearFilter.value;
+      return getApprovedStudents().filter(s => {
+        if (q && !(s.name.toLowerCase().includes(q) || s.roll.toLowerCase().includes(q))) return false;
+        if (dept && s.dept !== dept) return false;
+        if (year && s.year !== year) return false;
+        return true;
+      });
+    }
+
+    function render() {
+      populateDeptFilter();
+      const filtered = getFiltered();
+      document.getElementById("resultCount").textContent = `${filtered.length} student${filtered.length !== 1 ? "s" : ""}`;
+      const tbody = document.getElementById("studentTableBody");
+      const emptyState = document.getElementById("emptyState");
+      const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = "";
+        emptyState.style.display = "block";
+        emptyState.innerHTML = `<div class="empty-state"><i class="fa-solid fa-user-slash"></i><h4>No students found</h4><p>Try adjusting your search or filters.</p></div>`;
+        document.getElementById("pagination").innerHTML = "";
+        return;
+      }
+      emptyState.style.display = "none";
+
+      const pageItems = paginate(filtered, currentPage, PER_PAGE);
+      tbody.innerHTML = pageItems.map(s => `
+      <tr>
+        <td>
+          <div class="student-cell">
+            <div class="mini-avatar">${initials(s.name)}</div>
+            <div>
+              <div class="s-name">${s.name}</div>
+              <div class="s-email">${s.email}</div>
+            </div>
+          </div>
+        </td>
+        <td>${s.roll}</td>
+        <td>${s.dept}</td>
+        <td>${s.year}</td>
+        <td>${s.room || "Not Allocated"}</td>
+        <td>${s.phone}</td>
+        <td>
+          <div class="action-cell">
+            <button class="btn btn-ghost icon-only" title="View profile" onclick="location.href='student-profile.html?roll=${encodeURIComponent(s.roll)}&admissionNo=${encodeURIComponent(s.admissionNo)}'"><i class="fa-solid fa-eye"></i></button>
+          </div>
+        </td>
+      </tr>`).join("");
+
+      buildPagination(document.getElementById("pagination"), filtered.length, PER_PAGE, currentPage, (p) => {
+        currentPage = p;
+        render();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+    }
+
+    [searchInput, deptFilter, yearFilter].forEach(el => {
+      el.addEventListener("input", () => { currentPage = 1; render(); });
+    });
+
+    /* Load students from backend first, then render */
+    fetchStudentsFromBackend().then(() => render());
+  </script>
+</body>
+
+</html>

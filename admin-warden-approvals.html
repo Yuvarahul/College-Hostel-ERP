@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Warden Approvals | HostelERP Admin Portal</title>
+<link rel="stylesheet" href="warden_dashboard.css">
+<link rel="stylesheet" href="admin-section.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+<div class="app-shell">
+  <div id="sidebar-root"></div>
+
+  <div class="main-content">
+    <div id="topbar-root"></div>
+
+    <main class="page">
+      <div class="breadcrumb">
+        <a href="admin-dashboard.html">Dashboard</a>
+        <i class="fa-solid fa-chevron-right"></i> Warden Approvals
+      </div>
+
+      <div class="greeting-banner">
+        <div>
+          <h2 id="pageTitle">Warden Approvals</h2>
+          <p>Approve or reject newly registered warden accounts.</p>
+        </div>
+        <i class="fa-solid fa-user-check greet-icon" id="pageIcon"></i>
+      </div>
+
+      <div class="admin-stat-strip" id="statStrip" style="display:none"></div>
+
+      <!-- New warden registration approvals -->
+      <section class="card panel" id="approvalPanel" style="display:none">
+        <div class="panel-title">
+          <span>Pending Warden Registrations</span>
+          <span class="muted" id="approvalCount">0 awaiting approval</span>
+        </div>
+        <p class="muted" style="margin:6px 0 16px">
+          A newly registered warden cannot log in until it is approved here. Rejecting a
+          registration records the reason and blocks the login.
+        </p>
+        <div class="approval-grid" id="approvalGrid"></div>
+
+        <div class="section-heading">Approval history</div>
+        <div class="table-wrap">
+          <table class="manage-table">
+            <thead>
+              <tr>
+                <th>Employee ID</th><th>Name</th><th>Department</th><th>Status</th>
+                <th>Decided By</th><th>Decided On</th><th>Remarks</th>
+              </tr>
+            </thead>
+            <tbody id="decidedBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Details modal -->
+      <div class="modal" id="modal">
+        <div class="modal-panel">
+          <div class="panel-title">
+            <span id="modalTitle">Details</span>
+            <button class="btn-small" onclick="closeModal()">Close</button>
+          </div>
+          <div id="modalBody"></div>
+        </div>
+      </div>
+
+      <!-- Add / Edit modal -->
+      <div class="modal" id="formModal">
+        <div class="modal-panel">
+          <div class="panel-title">
+            <span id="formTitle">Add Record</span>
+            <button class="btn-small" onclick="closeForm()">Close</button>
+          </div>
+          <form onsubmit="saveRecord(event)">
+            <div class="form-grid" id="formFields"></div>
+            <div style="margin-top:16px"><button class="btn-primary" type="submit">Save</button></div>
+          </form>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script src="js/script.js"></script>
+<script src="warden_dashboard.js"></script>
+<script src="admin-shell.js"></script>
+<script>window.ADMIN_SECTION = "approvals";</script>
+<script src="admin-section.js"></script>
+</body>
+</html>

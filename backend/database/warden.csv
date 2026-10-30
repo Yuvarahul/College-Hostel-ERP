@@ -1,0 +1,7 @@
+employee_id,full_name,department,shift,email,phone_no,address,password,id_proof,created_at,status,approved_by,approved_date,rejection_reason
+WRD101,Arun Kumar,Boys Hostel Block A,Shift 1,arun.warden@amjaincollege.edu,9000000101,"Amjain Campus, Chennai",$2b$10$UMTS8hWsuXIJecNmdiW4wuDzHC6JplFPeSGI//xuFxqb7ZcaBXnoK,,8/9/2026,Active,,,
+WRD102,Bala Murugan,Boys Hostel Block B,General Shift,bala.warden@amjaincollege.edu,9000000102,Chennai,$2b$10$y.nNwsusKhvK3Zlhw6Wibe7WPAWppefOsr22xhpHzQkFLjNlox.qy,,8/9/2026,Active,,,
+WRD103,Karthik Raj,Girls Hostel Block A,Shift 1,karthik.warden@amjaincollege.edu,9000000103,Chennai,$2b$10$8zTkbPNOM4cLjuz13XgLtO/DrIFYbiYehFxn7SdBptl7T6bV0OGBa,,8/9/2026,Active,,,
+WRD104,Praveen Kumar,Girls Hostel Block B,Shift 2,praveen.warden@amjaincollege.edu,9000000104,Chennai,$2b$10$JZ0djEN49uM64HjGemnVHuwb9DDnBv6LHrTRrfbkAWnU0Lhq0S91a,,8/9/2026,Active,,,
+WRD105,Sathish Kumar,Administration,Shift 1,sathish.warden@amjaincollege.edu,9000000105,Chennai,$2b$10$hkjrWwsyAKgEnuDGkCOTjuVOw626wHQb9.MAxYmVynKL7i0Z8Paxi,,8/9/2026,Active,,,
+WRD106,Demo Pending Warden,Boys Hostel Block C,Shift 2,demo.warden@amjaincollege.edu,9000000106,Madurai,$2b$10$HmQpyr5s2V4iDAEwIdDbz.SuPUJgsi5k1gxhZEZi99EwSQgHM4bAK,aadhaar.pdf,15/9/2026,Pending,,,

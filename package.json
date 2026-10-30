@@ -1,0 +1,31 @@
+{
+  "name": "hostelerp",
+  "version": "1.0.0",
+  "description": "HostelERP - Student, Warden and Admin Hostel Management System",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "server": "node backend/server.js",
+    "dev": "node backend/server.js"
+  },
+  "keywords": [
+    "hostel",
+    "erp",
+    "express",
+    "nodejs",
+    "csv"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "csv-parser": "^3.2.1",
+    "csv-writer": "^1.6.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "multer": "^2.2.0",
+    "nodemailer": "^9.0.3",
+    "uuid": "^14.0.1"
+  }
+}

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Outpass Requests | HostelERP Admin Portal</title>
+<link rel="stylesheet" href="warden_dashboard.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  .op-table { width:100%; border-collapse:collapse; background:var(--white); border-radius:var(--radius-md); overflow:hidden; box-shadow:var(--shadow-sm); }
+  .op-table th, .op-table td { padding:14px 16px; text-align:left; font-size:12.5px; border-bottom:1px solid rgba(11,61,145,0.06); }
+  .op-table th { color:var(--text-muted); text-transform:uppercase; font-size:11px; letter-spacing:0.4px; }
+  .op-table tr:last-child td { border-bottom:none; }
+</style>
+</head>
+<body>
+
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+
+    <div class="main-content">
+      <div id="topbar-root"></div>
+
+      <main class="page">
+        <div class="breadcrumb"><a href="admin-dashboard.html">Dashboard</a> <i class="fa-solid fa-chevron-right"></i> Outpass Requests</div>
+        <div class="page-header">
+          <h2>Outpass Requests</h2>
+          <p>Every outpass request submitted by students. Read-only — approvals are handled by the Warden.</p>
+        </div>
+
+        <div class="filter-bar">
+          <div class="search-box" style="background:var(--grey-bg);">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="searchInput" placeholder="Search by name or roll number...">
+          </div>
+          <select id="statusFilter">
+            <option value="">All Statuses</option>
+            <option value="Pending">Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+          <span class="result-count" id="resultCount">0 requests</span>
+        </div>
+
+        <table class="op-table">
+          <thead>
+            <tr>
+              <th>Student</th><th>Roll No.</th><th>Room</th><th>Out Time</th><th>Expected Return</th><th>Reason</th><th>Status</th><th>Handled By</th>
+            </tr>
+          </thead>
+          <tbody id="outpassTableBody"></tbody>
+        </table>
+        <div id="outpassEmptyState"></div>
+      </main>
+    </div>
+  </div>
+
+<script src="students.js"></script>
+<script src="registrations.js"></script>
+<script src="rooms.js"></script>
+<script src="js/script.js"></script>
+<script src="warden_dashboard.js"></script>
+<script src="admin-shell.js"></script>
+<script src="admin-data.js"></script>
+<script>
+  if (initAdminShell("outpass")) {
+    let query = "", statusFilter = "";
+
+    function getFiltered() {
+      const q = query.trim().toLowerCase();
+      return getOutpassRequests().filter(s => {
+        if (statusFilter && s.request.status !== statusFilter) return false;
+        if (!q) return true;
+        return s.name.toLowerCase().includes(q) || (s.roll || "").toLowerCase().includes(q);
+      });
+    }
+
+    function render() {
+      const list = getFiltered();
+      document.getElementById("resultCount").textContent = `${list.length} request${list.length === 1 ? "" : "s"}`;
+      const body = document.getElementById("outpassTableBody");
+      const empty = document.getElementById("outpassEmptyState");
+
+      if (list.length === 0) {
+        body.innerHTML = "";
+        empty.innerHTML = `<div class="empty-state"><i class="fa-solid fa-door-open"></i><h4>No outpass requests found</h4></div>`;
+        return;
+      }
+      empty.innerHTML = "";
+
+      body.innerHTML = list.map(s => `
+        <tr>
+          <td>${s.name}</td>
+          <td>${s.roll}</td>
+          <td>${s.room || "—"}</td>
+          <td>${s.request.fromTime ? new Date(s.request.fromTime).toLocaleString("en-IN") : "—"}</td>
+          <td>${s.request.toTime ? new Date(s.request.toTime).toLocaleString("en-IN") : "—"}</td>
+          <td>${s.request.reason || s.request.destination || "—"}</td>
+          <td>${statusBadge(s.request.status)}</td>
+          <td>${s.request.status === "Pending" ? "—" : WARDEN.name}</td>
+        </tr>`).join("");
+    }
+
+    document.getElementById("searchInput").addEventListener("input", (e) => { query = e.target.value; render(); });
+    document.getElementById("statusFilter").addEventListener("change", (e) => { statusFilter = e.target.value; render(); });
+    render();
+  }
+</script>
+</body>
+</html>

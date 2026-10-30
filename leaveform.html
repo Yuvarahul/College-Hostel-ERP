@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Leave Form</title>
+
+<link rel="stylesheet" href="dashboard.css">
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+</head>
+
+<body>
+
+<div class="main-content">
+
+<div class="welcome">
+
+<h2>Leave Application</h2>
+
+<p>Submit your hostel leave request.</p>
+
+</div>
+
+<div class="card">
+
+<div class="form-alert" id="leaveAlert"></div>
+
+<label>Student Name</label>
+
+<input type="text" class="textbox" id="leaveStudentName" placeholder="Enter your name">
+
+<br><br>
+
+<label>Roll Number</label>
+
+<input type="text" class="textbox" id="leaveRollNumber" placeholder="Enter Roll Number">
+
+<br><br>
+
+<label>Room Number</label>
+
+<input type="text" class="textbox" id="leaveRoomNumber" placeholder="Enter Room Number">
+
+<br><br>
+
+<label>From Date</label>
+
+<input
+    type="text"
+    class="textbox"
+    id="fromDate"
+    placeholder="Select From Date"
+    readonly
+>
+
+<br><br>
+
+<label>To Date</label>
+
+<input
+    type="text"
+    class="textbox"
+    id="toDate"
+    placeholder="Select To Date"
+    readonly
+>
+
+<br><br>
+
+<script>
+
+// Flatpickr for From Date
+// Student can select today or any future date.
+// Past dates are blocked.
+
+flatpickr("#fromDate", {
+    dateFormat: "d-m-Y",
+    minDate: "today",
+    allowInput: false,
+    clickOpens: true
+});
+
+
+// Tomorrow
+const tomorrow = new Date();
+tomorrow.setDate(tomorrow.getDate() + 1);
+
+
+// Flatpickr for To Date
+// To Date can only be tomorrow or a future date.
+
+flatpickr("#toDate", {
+    dateFormat: "d-m-Y",
+    minDate: tomorrow,
+    allowInput: false,
+    clickOpens: true
+});
+
+</script>
+
+<label>Reason</label>
+
+<textarea
+    rows="5"
+    class="textbox"
+    id="leaveReason"
+    placeholder="Reason for Leave"
+></textarea>
+
+<br><br>
+
+<div class="form-group">
+
+    <label for="proof">Upload Proof</label><br>
+
+    <input
+        type="file"
+        id="proof"
+        name="proof"
+        accept=".jpg,.jpeg,.png,.pdf"
+    >
+
+</div>
+
+<br>
+
+<button type="button" id="leaveSubmitBtn">
+    Apply Leave
+</button>
+
+<a href="dashboard.html" class="back-to-dashboard">
+    &larr; Back to Dashboard
+</a>
+
+</div>
+
+</div>
+
+<script src="students.js"></script>
+<script src="registrations.js"></script>
+<script src="student.js"></script>
+
+</body>
+</html>

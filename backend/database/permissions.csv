@@ -1,0 +1,5 @@
+permission_id,name,description,status
+P-STUDENTS,Manage Students,"Create, edit and activate/deactivate students",Active
+P-STAFF,Manage Staff,"Manage wardens, security and supervisors",Active
+P-REPORTS,View Reports,Generate administrative reports,Active
+P-AUDIT,View Audit Logs,Review administrative actions,Active

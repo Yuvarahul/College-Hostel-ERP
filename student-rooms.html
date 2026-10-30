@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Rooms | HostelERP Warden Portal</title>
+<link rel="stylesheet" href="warden_dashboard.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  .room-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px,1fr)); gap:18px; margin-bottom:24px; }
+  .room-card { background:var(--white); border-radius:var(--radius-md); box-shadow:var(--shadow-sm); padding:20px; transition:var(--transition); border:1px solid rgba(11,61,145,0.06); display:flex; flex-direction:column; }
+  .room-card:hover { box-shadow:var(--shadow-md); transform:translateY(-3px); }
+  .room-card-head { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:12px; }
+  .room-card-head h4 { font-size:15px; font-weight:700; }
+  .room-card-head p { font-size:11px; color:var(--text-muted); margin-top:2px; }
+  .room-progress-wrap { margin-bottom:12px; }
+  .room-progress-bar { height:8px; background:var(--grey-bg); border-radius:10px; overflow:hidden; margin-bottom:6px; }
+  .room-progress-fill { height:100%; border-radius:10px; background:linear-gradient(90deg,var(--royal-blue),var(--royal-blue-light)); transition:width .3s ease; }
+  .room-progress-wrap span { font-size:11px; color:var(--text-muted); }
+  .room-stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
+  .room-stats-row div { background:var(--grey-bg); border-radius:var(--radius-sm); padding:8px; text-align:center; }
+  .room-stats-row span { display:block; font-size:9.5px; text-transform:uppercase; letter-spacing:0.4px; color:var(--grey-light); font-weight:700; }
+  .room-stats-row strong { font-size:15px; }
+  .room-occupants { flex:1; margin-bottom:14px; min-height:20px; }
+  .occupant-row { display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px dashed rgba(11,61,145,0.08); }
+  .occupant-row:last-child { border-bottom:none; }
+  .occupant-row .mini-avatar { width:30px; height:30px; font-size:10.5px; flex-shrink:0; }
+  .occupant-row .o-info { flex:1; min-width:0; }
+  .occupant-row .o-info h5 { font-size:12.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .occupant-row .o-info p { font-size:10.5px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .occupant-row .o-bed { font-size:10px; font-weight:700; color:var(--royal-blue); background:var(--light-blue); padding:3px 7px; border-radius:20px; flex-shrink:0; }
+  .occupant-row .o-actions { display:flex; gap:4px; flex-shrink:0; }
+  .occupant-row .o-actions .btn { padding:5px 7px; font-size:10.5px; }
+  .no-occupants { font-size:12px; color:var(--grey-light); text-align:center; padding:14px 0; }
+  .room-card-actions { display:flex; gap:8px; }
+  .room-card-actions .btn { flex:1; padding:8px; font-size:11.5px; }
+  .form-row { margin-bottom:14px; }
+  .form-row label { display:block; font-size:11.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.3px; margin-bottom:6px; }
+  .form-row select, .form-row input, .form-row textarea { width:100%; padding:10px 14px; border-radius:var(--radius-sm); border:1.5px solid rgba(11,61,145,0.12); background:var(--white); color:var(--text-main); font-family:inherit; font-size:13px; }
+  .form-row textarea { resize:vertical; min-height:70px; }
+  .form-row-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .validation-msg { background:var(--danger-bg); color:#991B1B; border-radius:var(--radius-sm); padding:10px 14px; font-size:12px; margin-bottom:14px; display:none; }
+  .activity-row { display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px dashed rgba(11,61,145,0.08); font-size:12.5px; }
+  .activity-row:last-child { border-bottom:none; }
+  .activity-row .a-icon { width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+  .activity-row .a-body { flex:1; min-width:0; }
+  .activity-row .a-body p.a-title { font-weight:600; }
+  .activity-row .a-body p.a-sub { font-size:11px; color:var(--text-muted); margin-top:2px; }
+  .activity-row .a-time { font-size:10.5px; color:var(--text-muted); white-space:nowrap; }
+</style>
+</head>
+<body>
+
+  <div class="app-shell">
+    <div id="sidebar-root"></div>
+
+    <div class="main-content">
+      <div id="topbar-root"></div>
+
+      <main class="page">
+        <div class="breadcrumb"><a href="warden_dashboard.html">Dashboard</a> <i class="fa-solid fa-chevron-right"></i> Student Rooms</div>
+        <div class="page-header">
+          <h2>Student Room Management</h2>
+          <p>Track occupancy across every block, allocate freshers and seniors, and manage vacates &amp; transfers.</p>
+        </div>
+
+        <div class="stat-grid" style="grid-template-columns:repeat(auto-fit, minmax(180px,1fr));">
+          <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-door-closed"></i></div><div class="stat-info"><h3 id="statTotalRooms">0</h3><p>Total Rooms</p></div></div>
+          <div class="stat-card"><div class="stat-icon amber"><i class="fa-solid fa-users"></i></div><div class="stat-info"><h3 id="statOccupiedRooms">0</h3><p>Occupied Rooms</p></div></div>
+          <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-circle-check"></i></div><div class="stat-info"><h3 id="statAvailableRooms">0</h3><p>Available Rooms</p></div></div>
+          <div class="stat-card"><div class="stat-icon amber"><i class="fa-solid fa-user-group"></i></div><div class="stat-info"><h3 id="statPartialRooms">0</h3><p>Partially Filled</p></div></div>
+          <div class="stat-card"><div class="stat-icon red"><i class="fa-solid fa-lock"></i></div><div class="stat-info"><h3 id="statFullRooms">0</h3><p>Full Rooms</p></div></div>
+          <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-bed"></i></div><div class="stat-info"><h3 id="statVacantBeds">0</h3><p>Vacant Beds</p></div></div>
+        </div>
+
+        <div class="filter-bar">
+          <div class="search-box" style="background:var(--grey-bg);">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="searchInput" placeholder="Search room number, student name or roll...">
+          </div>
+          <select id="blockFilter"><option value="">All Blocks</option></select>
+          <select id="floorFilter"><option value="">All Floors</option></select>
+          <select id="statusFilter">
+            <option value="">All Statuses</option>
+            <option value="Available">Available</option>
+            <option value="Partially Filled">Partially Filled</option>
+            <option value="Full">Full</option>
+            <option value="Maintenance">Maintenance</option>
+          </select>
+          <span class="result-count" id="resultCount">0 rooms</span>
+        </div>
+
+        <div class="room-grid" id="roomGrid"></div>
+        <div class="pagination" id="pagination"></div>
+
+        <div class="card panel">
+          <div class="panel-title"><span>Room Activity Log</span></div>
+          <div id="activityLog"></div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+<script src="students.js"></script>
+<script src="registrations.js"></script>
+<script src="rooms.js"></script>
+<script src="warden_dashboard.js"></script>
+<script>
+  initShell("rooms", { showSearch: false });
+
+  const PER_PAGE = 12;
+  let currentPage = 1;
+  const searchInput = document.getElementById("searchInput");
+  const blockFilter = document.getElementById("blockFilter");
+  const floorFilter = document.getElementById("floorFilter");
+  const statusFilter = document.getElementById("statusFilter");
+
+  blockFilter.innerHTML += HOSTEL_BLOCKS.map(b => `<option value="${b}">Block ${b}</option>`).join("");
+  floorFilter.innerHTML += HOSTEL_FLOORS.map(f => `<option value="${f}">Floor ${f}</option>`).join("");
+
+  function refreshStats() {
+    const s = getRoomStats();
+    document.getElementById("statTotalRooms").textContent = s.totalRooms;
+    document.getElementById("statOccupiedRooms").textContent = s.occupiedRooms;
+    document.getElementById("statAvailableRooms").textContent = s.availableRooms;
+    document.getElementById("statPartialRooms").textContent = s.partiallyFilledRooms;
+    document.getElementById("statFullRooms").textContent = s.fullRooms;
+    document.getElementById("statVacantBeds").textContent = s.vacantBeds;
+  }
+
+  function getFilteredRooms() {
+    const q = searchInput.value.trim().toLowerCase();
+    const block = blockFilter.value, floor = floorFilter.value, status = statusFilter.value;
+    return getAllRoomsInfo().filter(room => {
+      if (block && room.block !== block) return false;
+      if (floor && String(room.floor) !== String(floor)) return false;
+      if (status && room.status !== status) return false;
+      if (q) {
+        const roomMatch = room.id.toLowerCase().includes(q);
+        const occMatch = room.occupants.some(o => o.name.toLowerCase().includes(q) || (o.roll && o.roll.toLowerCase().includes(q)) || (o.admissionNo && o.admissionNo.toLowerCase().includes(q)));
+        if (!roomMatch && !occMatch) return false;
+      }
+      return true;
+    });
+  }
+
+  function occupantRow(o, roomId) {
+    return `
+      <div class="occupant-row">
+        <div class="mini-avatar">${initials(o.name)}</div>
+        <div class="o-info">
+          <h5>${o.name}</h5>
+          <p>${o.roll || o.admissionNo} · ${o.dept} · ${o.year}</p>
+        </div>
+        <span class="o-bed">Bed ${o.bed}</span>
+        <div class="o-actions">
+          <button class="btn btn-ghost icon-only" title="Transfer Student" onclick="openTransferModal(${o.id})"><i class="fa-solid fa-right-left"></i></button>
+          <button class="btn btn-ghost icon-only" title="Vacate Student" onclick="openVacateModal(${o.id})"><i class="fa-solid fa-door-open"></i></button>
+        </div>
+      </div>`;
+  }
+
+  function renderRoomCard(room) {
+    const pct = Math.round((room.occupied / room.capacity) * 100);
+    const disallowAllocate = room.status === "Full" || room.status === "Maintenance";
+    return `
+      <div class="room-card">
+        <div class="room-card-head">
+          <div>
+            <h4>Room ${room.id}</h4>
+            <p>Block ${room.block} · Floor ${room.floor}</p>
+          </div>
+          ${roomStatusBadge(room.status)}
+        </div>
+        <div class="room-progress-wrap">
+          <div class="room-progress-bar"><div class="room-progress-fill" style="width:${pct}%; background:${room.status === 'Full' ? 'var(--danger)' : room.status === 'Maintenance' ? 'var(--grey-light)' : 'linear-gradient(90deg,var(--royal-blue),var(--royal-blue-light))'};"></div></div>
+          <span>${room.occupied} of ${room.capacity} beds occupied</span>
+        </div>
+        <div class="room-stats-row">
+          <div><span>Capacity</span><strong>${room.capacity}</strong></div>
+          <div><span>Occupied</span><strong>${room.occupied}</strong></div>
+          <div><span>Available</span><strong>${room.available}</strong></div>
+        </div>
+        <div class="room-occupants">
+          ${room.occupants.length ? room.occupants.map(o => occupantRow(o, room.id)).join("") : `<p class="no-occupants">No students allocated to this room yet.</p>`}
+        </div>
+        <div class="room-card-actions">
+          <button class="btn btn-outline" onclick="viewRoomDetails('${room.id}')"><i class="fa-solid fa-eye"></i> View Details</button>
+          <button class="btn btn-primary" ${disallowAllocate ? "disabled" : ""} onclick="openAllocateStudentModal('${room.id}')"><i class="fa-solid fa-user-plus"></i> ${room.status === "Full" ? "Room Full" : "Allocate Student"}</button>
+        </div>
+      </div>`;
+  }
+
+  function render() {
+    refreshStats();
+    const filtered = getFilteredRooms();
+    document.getElementById("resultCount").textContent = `${filtered.length} room${filtered.length !== 1 ? "s" : ""}`;
+    const grid = document.getElementById("roomGrid");
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    if (filtered.length === 0) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><i class="fa-solid fa-door-closed"></i><h4>No rooms found</h4><p>Try adjusting your search or filters.</p></div>`;
+      document.getElementById("pagination").innerHTML = "";
+    } else {
+      grid.innerHTML = paginate(filtered, currentPage, PER_PAGE).map(renderRoomCard).join("");
+      buildPagination(document.getElementById("pagination"), filtered.length, PER_PAGE, currentPage, (p) => { currentPage = p; render(); window.scrollTo({top:0,behavior:"smooth"}); });
+    }
+
+    renderActivityLog();
+  }
+
+  /* ---------- Room Activity Log ---------- */
+  const ACTIVITY_ICON = { Allocation: "fa-user-plus", Vacate: "fa-door-open", Transfer: "fa-right-left" };
+  const ACTIVITY_COLOR = { Allocation: "green", Vacate: "amber", Transfer: "blue" };
+  function renderActivityLog() {
+    const log = getRoomHistory().slice(0, 15);
+    const el = document.getElementById("activityLog");
+    if (!log.length) { el.innerHTML = `<div class="empty-state"><i class="fa-solid fa-clock-rotate-left"></i><h4>No activity yet</h4><p>Allocations, vacates and transfers will show up here.</p></div>`; return; }
+    el.innerHTML = log.map(e => `
+      <div class="activity-row">
+        <div class="a-icon stat-icon ${ACTIVITY_COLOR[e.type]}"><i class="fa-solid ${ACTIVITY_ICON[e.type]}"></i></div>
+        <div class="a-body">
+          <p class="a-title">${e.type === "Allocation" ? "Room Allocated" : e.type === "Vacate" ? "Room Vacated" : "Room Transferred"} — ${e.studentName} <span style="color:var(--text-muted); font-weight:400;">(${e.roll})</span></p>
+          <p class="a-sub">${e.type === "Transfer" ? `${e.oldRoom} → ${e.newRoom} · ${e.reason}` : e.type === "Vacate" ? `Vacated ${e.oldRoom}` : `Assigned to ${e.newRoom}`} · By ${e.performedBy}</p>
+        </div>
+        <span class="a-time">${fmtDateTime(new Date(e.date))}</span>
+      </div>`).join("");
+  }
+
+  /* ---------- View Details ---------- */
+  function viewRoomDetails(roomId) {
+    const room = getRoomInfo(roomId);
+    const history = getRoomHistory().filter(e => e.oldRoom === roomId || e.newRoom === roomId).slice(0, 8);
+    openDetailsModal({
+      title: `Room ${room.id} · Block ${room.block}, Floor ${room.floor}`,
+      bodyHtml: `
+        <div class="detail-grid" style="grid-template-columns:repeat(3,1fr);">
+          <div class="d-item"><span>Capacity</span><p>${room.capacity}</p></div>
+          <div class="d-item"><span>Occupied</span><p>${room.occupied}</p></div>
+          <div class="d-item"><span>Available</span><p>${room.available}</p></div>
+        </div>
+        <div class="d-item" style="margin-top:14px;"><span>Status</span><p>${room.status}</p></div>
+        <div style="margin-top:16px;">
+          <span style="display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:0.4px; color:var(--grey-light); font-weight:700; margin-bottom:8px;">Occupants</span>
+          ${room.occupants.length ? room.occupants.map(o => `<div class="mini-list-item"><div class="mini-avatar">${initials(o.name)}</div><div class="mini-info"><h4>${o.name}</h4><p>${o.roll || o.admissionNo} · ${o.dept} · ${o.year} · Bed ${o.bed}</p></div></div>`).join("") : `<p class="no-occupants">No students allocated yet.</p>`}
+        </div>
+        <div style="margin-top:16px;">
+          <span style="display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:0.4px; color:var(--grey-light); font-weight:700; margin-bottom:8px;">Room History</span>
+          ${history.length ? history.map(e => `<div class="mini-list-item"><div class="mini-avatar stat-icon ${ACTIVITY_COLOR[e.type]}" style="width:32px;height:32px;font-size:11px;"><i class="fa-solid ${ACTIVITY_ICON[e.type]}"></i></div><div class="mini-info"><h4>${e.type} — ${e.studentName}</h4><p>${fmtDateTime(new Date(e.date))} · By ${e.performedBy}</p></div></div>`).join("") : `<p class="no-occupants">No history recorded for this room.</p>`}
+        </div>
+        <div style="margin-top:16px; display:flex; gap:10px;">
+          <button class="btn ${room.maintenance ? 'btn-success' : 'btn-outline'}" style="flex:1;" onclick="toggleMaintenance('${room.id}')"><i class="fa-solid fa-screwdriver-wrench"></i> ${room.maintenance ? "Mark as Available" : "Mark as Maintenance"}</button>
+        </div>`,
+      footerHtml: `<button class="btn btn-primary" onclick="closeDetailsModal()">Close</button>`
+    });
+  }
+
+  function toggleMaintenance(roomId) {
+    setRoomMaintenance(roomId, !isRoomUnderMaintenance(roomId));
+    closeDetailsModal();
+    showToast("info", "Room updated", `Room ${roomId} maintenance status changed.`);
+    render();
+  }
+
+  /* ---------- Allocate Student modal ---------- */
+  function openAllocateStudentModal(roomId) {
+    const room = getRoomInfo(roomId);
+    const candidates = getUnallocatedResidents();
+    let overlay = document.getElementById("allocStuModalOverlay");
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.className = "modal-overlay";
+      overlay.id = "allocStuModalOverlay";
+      document.body.appendChild(overlay);
+      overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.classList.remove("open"); });
+    }
+    overlay.innerHTML = `
+      <div class="modal-box">
+        <div class="modal-header">
+          <h3><i class="fa-solid fa-user-plus"></i> Allocate Student · Room ${room.id}</h3>
+          <button class="modal-close" onclick="document.getElementById('allocStuModalOverlay').classList.remove('open')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+          <div class="validation-msg" id="allocStuValidation"></div>
+          <div class="detail-grid" style="grid-template-columns:repeat(3,1fr); margin-bottom:14px;">
+            <div class="d-item"><span>Capacity</span><p>${room.capacity}</p></div>
+            <div class="d-item"><span>Occupied</span><p>${room.occupied}</p></div>
+            <div class="d-item"><span>Available</span><p>${room.available}</p></div>
+          </div>
+          ${candidates.length === 0 ? `<div class="empty-state"><i class="fa-solid fa-user-slash"></i><h4>No unallocated students</h4><p>Every approved student currently has a room.</p></div>` : `
+          <div class="form-row">
+            <label>Select Student (Room Number = Not Allocated)</label>
+            <select id="allocStuSelect">${candidates.map(c => `<option value="${c.id}">${c.name} — ${c.roll || c.admissionNo} — ${c.dept}</option>`).join("")}</select>
+          </div>
+          <div class="form-row">
+            <label>Assign Bed</label>
+            <select id="allocStuBed">${availableBedsOfRoom(room.id).map(b => `<option value="${b}">Bed ${b}</option>`).join("")}</select>
+          </div>`}
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="document.getElementById('allocStuModalOverlay').classList.remove('open')">Cancel</button>
+          ${candidates.length ? `<button class="btn btn-primary" id="confirmAllocStuBtn"><i class="fa-solid fa-check"></i> Save</button>` : ""}
+        </div>
+      </div>`;
+
+    if (candidates.length) {
+      document.getElementById("confirmAllocStuBtn").addEventListener("click", () => {
+        const regId = document.getElementById("allocStuSelect").value;
+        const bed = document.getElementById("allocStuBed").value;
+        const result = allocateRoomToRegistration(regId, room.id, bed, { approve: false });
+        const msgBox = document.getElementById("allocStuValidation");
+        if (result.error) { msgBox.textContent = result.error; msgBox.style.display = "block"; return; }
+        overlay.classList.remove("open");
+        showToast("success", "Student Allocated", `${result.reg.name} assigned to Room ${room.id}, Bed ${bed}.`);
+        render();
+      });
+    }
+
+    overlay.classList.add("open");
+  }
+
+  /* ---------- Vacate Student ----------
+     Clicking "Vacate Student" never vacates immediately — it opens
+     this dialog so the Warden can pick a reason and then choose
+     between "Vacate Only" (student is released with no room, status
+     -> Waiting For Allocation) or "Vacate & Transfer" (the student
+     is never left without a room; this simply hands off to the
+     existing Transfer modal / Room Allocation logic below). */
+  function openVacateModal(regId) {
+    const reg = getRegistrations().find(r => r.id === Number(regId));
+    if (!reg) return;
+    if (!reg.room) { showToast("error", "Nothing to vacate", `${reg.name} is not currently allocated a room.`); return; }
+
+    let overlay = document.getElementById("vacateModalOverlay");
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.className = "modal-overlay";
+      overlay.id = "vacateModalOverlay";
+      document.body.appendChild(overlay);
+      overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.classList.remove("open"); });
+    }
+    overlay.innerHTML = `
+      <div class="modal-box">
+        <div class="modal-header">
+          <h3><i class="fa-solid fa-door-open"></i> Vacate Student · ${reg.name}</h3>
+          <button class="modal-close" onclick="document.getElementById('vacateModalOverlay').classList.remove('open')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+          <div class="validation-msg" id="vacateValidation"></div>
+          <div class="detail-grid" style="grid-template-columns:repeat(4,1fr); margin-bottom:16px;">
+            <div class="d-item"><span>Block</span><p>${reg.block}</p></div>
+            <div class="d-item"><span>Floor</span><p>${reg.floor}</p></div>
+            <div class="d-item"><span>Room</span><p>${reg.room}</p></div>
+            <div class="d-item"><span>Bed</span><p>${reg.bed}</p></div>
+          </div>
+          <div class="form-row">
+            <label>Reason</label>
+            <select id="vacateReason">${VACATE_REASONS.map(r => `<option>${r}</option>`).join("")}</select>
+          </div>
+          <p style="font-size:12px; color:var(--text-muted);">
+            <strong>Vacate Only</strong> removes the student from this room and marks them "Waiting For Room Allocation".
+            <strong>Vacate &amp; Transfer</strong> moves them straight into a new room using Room Allocation, so they are never left without a bed.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="document.getElementById('vacateModalOverlay').classList.remove('open')">Cancel</button>
+          <button class="btn btn-danger" id="vacateOnlyBtn"><i class="fa-solid fa-door-open"></i> Vacate Only</button>
+          <button class="btn btn-primary" id="vacateTransferBtn"><i class="fa-solid fa-right-left"></i> Vacate &amp; Transfer</button>
+        </div>
+      </div>`;
+
+    document.getElementById("vacateOnlyBtn").addEventListener("click", () => {
+      const reason = document.getElementById("vacateReason").value;
+      const result = vacateRoomForRegistration(regId, reason);
+      const msgBox = document.getElementById("vacateValidation");
+      if (result.error) { msgBox.textContent = result.error; msgBox.style.display = "block"; return; }
+      overlay.classList.remove("open");
+      showToast("success", "Room Vacated", `${reg.name} has been removed from Room ${result.oldRoom}.`);
+      render();
+    });
+
+    document.getElementById("vacateTransferBtn").addEventListener("click", () => {
+      const reason = document.getElementById("vacateReason").value;
+      overlay.classList.remove("open");
+      openTransferModal(regId, reason);
+    });
+
+    overlay.classList.add("open");
+  }
+
+  /* ---------- Transfer ----------
+     Reused both by the standalone "Transfer" button and by
+     "Vacate & Transfer" above (optional presetReason carries the
+     reason picked in the Vacate dialog into this same form). */
+  function openTransferModal(regId, presetReason) {
+    const reg = getRegistrations().find(r => r.id === Number(regId));
+    if (!reg) return;
+    let overlay = document.getElementById("transferModalOverlay");
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.className = "modal-overlay";
+      overlay.id = "transferModalOverlay";
+      document.body.appendChild(overlay);
+      overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.classList.remove("open"); });
+    }
+    const REASONS = ["Student Request", "Medical Reason", "Room Upgrade", "Maintenance", "Disciplinary Action", "Administration Decision", "Other"];
+    overlay.innerHTML = `
+      <div class="modal-box" style="max-width:600px;">
+        <div class="modal-header">
+          <h3><i class="fa-solid fa-right-left"></i> Transfer Student · ${reg.name}</h3>
+          <button class="modal-close" onclick="document.getElementById('transferModalOverlay').classList.remove('open')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+          <div class="validation-msg" id="transferValidation"></div>
+
+          <span style="display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:0.4px; color:var(--grey-light); font-weight:700; margin-bottom:8px;">Current Room</span>
+          <div class="detail-grid" style="grid-template-columns:repeat(4,1fr); margin-bottom:16px;">
+            <div class="d-item"><span>Block</span><p>${reg.block}</p></div>
+            <div class="d-item"><span>Floor</span><p>${reg.floor}</p></div>
+            <div class="d-item"><span>Room</span><p>${reg.room}</p></div>
+            <div class="d-item"><span>Bed</span><p>${reg.bed}</p></div>
+          </div>
+
+          <span style="display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:0.4px; color:var(--grey-light); font-weight:700; margin-bottom:8px;">Transfer To</span>
+          <div class="form-row-2">
+            <div class="form-row"><label>Block</label>
+              <select id="tBlock"><option value="">Select Block</option>${HOSTEL_BLOCKS.map(b => `<option value="${b}">Block ${b}</option>`).join("")}</select>
+            </div>
+            <div class="form-row"><label>Floor</label><select id="tFloor" disabled><option value="">Select Floor</option></select></div>
+          </div>
+          <div class="form-row-2">
+            <div class="form-row"><label>Room</label><select id="tRoom" disabled><option value="">Select Room</option></select></div>
+            <div class="form-row"><label>Bed</label><select id="tBed" disabled><option value="">Select Bed</option></select></div>
+          </div>
+
+          <div id="tOccPanel" style="display:none; background:var(--grey-bg); border-radius:var(--radius-sm); padding:14px 16px; margin-bottom:14px;">
+            <div class="detail-grid" style="grid-template-columns:repeat(3,1fr); margin-top:0;">
+              <div class="d-item"><span>Room Capacity</span><p id="tCapacity">–</p></div>
+              <div class="d-item"><span>Current Occupancy</span><p id="tOccupied">–</p></div>
+              <div class="d-item"><span>Available Beds</span><p id="tAvailable">–</p></div>
+            </div>
+          </div>
+
+          <div class="form-row"><label>Transfer Reason</label>
+            <select id="tReason">${(presetReason && !REASONS.includes(presetReason) ? `<option selected>${presetReason}</option>` : "") + REASONS.map(r => `<option ${r === presetReason ? "selected" : ""}>${r}</option>`).join("")}</select>
+          </div>
+          <div class="form-row"><label>Remarks</label><textarea id="tRemarks" placeholder="Optional notes for the record..."></textarea></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="document.getElementById('transferModalOverlay').classList.remove('open')">Cancel</button>
+          <button class="btn btn-primary" id="confirmTransferBtn" disabled><i class="fa-solid fa-right-left"></i> Transfer</button>
+        </div>
+      </div>`;
+
+    const tBlock = document.getElementById("tBlock"), tFloor = document.getElementById("tFloor"), tRoom = document.getElementById("tRoom"), tBed = document.getElementById("tBed");
+    const tOccPanel = document.getElementById("tOccPanel"), confirmBtn = document.getElementById("confirmTransferBtn");
+    function resetSelect(sel, placeholder) { sel.innerHTML = `<option value="">${placeholder}</option>`; sel.disabled = true; }
+
+    tBlock.addEventListener("change", () => {
+      resetSelect(tFloor, "Select Floor"); resetSelect(tRoom, "Select Room"); resetSelect(tBed, "Select Bed");
+      tOccPanel.style.display = "none"; confirmBtn.disabled = true;
+      if (!tBlock.value) return;
+      getFloorsForBlock().forEach(f => tFloor.insertAdjacentHTML("beforeend", `<option value="${f}">Floor ${f}</option>`));
+      tFloor.disabled = false;
+    });
+    tFloor.addEventListener("change", () => {
+      resetSelect(tRoom, "Select Room"); resetSelect(tBed, "Select Bed");
+      tOccPanel.style.display = "none"; confirmBtn.disabled = true;
+      if (!tFloor.value) return;
+      getRoomNumbersForFloor(tBlock.value, tFloor.value).forEach(roomId => {
+        const info = getRoomInfo(roomId);
+        const full = info.status === "Full" || info.status === "Maintenance";
+        tRoom.insertAdjacentHTML("beforeend", `<option value="${roomId}" ${full ? "disabled" : ""}>${roomId} — ${info.occupied}/${info.capacity} occupied${info.status === "Maintenance" ? " (Maintenance)" : full ? " (Full)" : ""}</option>`);
+      });
+      tRoom.disabled = false;
+    });
+    tRoom.addEventListener("change", () => {
+      resetSelect(tBed, "Select Bed"); confirmBtn.disabled = true;
+      if (!tRoom.value) { tOccPanel.style.display = "none"; return; }
+      const info = getRoomInfo(tRoom.value);
+      document.getElementById("tCapacity").textContent = info.capacity;
+      document.getElementById("tOccupied").textContent = info.occupied;
+      document.getElementById("tAvailable").textContent = info.available;
+      tOccPanel.style.display = "block";
+      availableBedsOfRoom(tRoom.value).forEach(b => tBed.insertAdjacentHTML("beforeend", `<option value="${b}">Bed ${b}</option>`));
+      tBed.disabled = false;
+    });
+    tBed.addEventListener("change", () => { confirmBtn.disabled = !tBed.value; });
+
+    confirmBtn.addEventListener("click", () => {
+      const result = transferRoomForRegistration(reg.id, tRoom.value, tBed.value, document.getElementById("tReason").value, document.getElementById("tRemarks").value);
+      const msgBox = document.getElementById("transferValidation");
+      if (result.error) { msgBox.textContent = result.error; msgBox.style.display = "block"; return; }
+      overlay.classList.remove("open");
+      showToast("success", "Room Transfer Successful", `${reg.name} moved to Block ${result.reg.block}, Room ${result.reg.room}, Bed ${result.reg.bed}.`);
+      render();
+    });
+
+    overlay.classList.add("open");
+  }
+
+  [searchInput, blockFilter, floorFilter, statusFilter].forEach(el => el.addEventListener("input", () => { currentPage = 1; render(); }));
+  render();
+</script>
+</body>
+</html>
