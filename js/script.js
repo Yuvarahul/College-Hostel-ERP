@@ -928,7 +928,11 @@ function handleStudentBackendLogin() {
     }
 
     try {
-      const apiBase = (window.location.port === "3000") ? "" : "http://localhost:3000";
+      const apiBase =
+  (window.location.hostname === "localhost" ||
+   window.location.hostname === "127.0.0.1")
+    ? "http://localhost:3000"
+    : "https://college-hostel-erp.onrender.com";
       const response = await fetch(`${apiBase}/api/students/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
