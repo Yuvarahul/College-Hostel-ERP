@@ -807,7 +807,7 @@ if (wardenLoginForm) {
     try {
 
       const response = await fetch(
-        "http://localhost:3000/api/wardens/login",
+        "/api/wardens/login",
         {
           method: "POST",
           headers: {
@@ -875,7 +875,7 @@ if (wardenLoginForm) {
       }
 
       try {
-        const apiBase = (window.location.port === "3000") ? "" : "http://localhost:3000";
+        const apiBase = window.location.origin;
         const response = await fetch(`${apiBase}/api/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -928,11 +928,7 @@ function handleStudentBackendLogin() {
     }
 
     try {
-      const apiBase =
-  (window.location.hostname === "localhost" ||
-   window.location.hostname === "127.0.0.1")
-    ? "http://localhost:3000"
-    : "https://college-hostel-erp.onrender.com";
+      const apiBase =window.location.origin;
       const response = await fetch(`${apiBase}/api/students/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1062,7 +1058,7 @@ if (wardenRegisterForm) {
     try {
 
       const response = await fetch(
-        "http://localhost:3000/api/wardens/register",
+        "/api/wardens/register",
         {
           method: "POST",
 
